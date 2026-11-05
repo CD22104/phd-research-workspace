@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.env*
+!.env.cloudflare.example
+*.log
+backups/
+__pycache__/
+.DS_Store
+web/public/downloads/research-timer-macos.zip

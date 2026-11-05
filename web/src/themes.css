@@ -1,0 +1,128 @@
+/* 皮肤：在 <html data-theme="…"> 上切换。默认「抹茶橄榄」的值在 style.css 的 :root 里。
+   每套皮肤覆盖同一组变量；新增皮肤时复制一段，改值即可（文字对比度用 scripts/check_theme_contrast.py 检查）。 */
+
+/* ───────── 蜂蜜小熊：暖黄侧栏、奶油底、小熊吉祥物 ───────── */
+:root[data-theme='honey'] {
+  --accent: #a8620c; --accent-deep: #7a4607; --accent-hover: #91540a; --on-accent: #ffffff;
+  --charcoal: #5b3d22; --sand: #f6c452; --sand-deep: #8a5a1f; --stone: #e9d8b8;
+  --surface-warm: #fff8ea; --surface-sand: #fdecc4; --text-on-dark: #fff6e3; --muted-on-dark: #f1dcb4;
+  --honey-soft: #fde4a6; --honey-mist: #fff3d6; --cream: #fffdf7; --card: #ffffff;
+  --line: #ecd9b3; --line-soft: #f5e9cf; --ink: #4a3117; --ink-2: #6e4f2e; --ink-3: #85664a;
+  --leaf: #5f8a3e; --leaf-soft: #e6f0d6; --piglet: #5b3d22; --piglet-soft: #5b3d22;
+  --sky: #5a4a33; --sky-soft: #f6ecda; --eeyore: #7a6650; --eeyore-soft: #f7efe1; --berry: #b0442f;
+  --read-bg: #e7f0dc; --read-hover: #dce9cd; --read-ink: #3f5a2a; --read-muted: #556b44; --read-line: #c5d8b0;
+  --line-card: #f0dfbd; --surface-muted: #f7efdf; --surface-soft: #fffaf0;
+  --today-bg: #fff6df; --today-head: #fde9b8; --today-line: #e8b44a;
+  --ev-default-bg: #fff3dc; --ev-checkin-bg: #f6ead6; --ev-checkin-line: #dcc39a;
+  --ev-break-bg: #faf3e6; --ev-break-line: #e6d6b8; --ev-break-accent: #c39a5a;
+  --ev-meeting-bg: #f8eedf; --ev-meeting-line: #e2cfae; --ev-other-accent: #9b7a52;
+  --block-bg: #fdedc6; --block-line: #efcf86; --sand-line: #e8c77a; --sand-hover: #f8d27a; --sand-pressed: #e3ae35;
+  --done-bg: #ebf2e2; --done-line: #cddcbc; --now-line: #d9682b; --now-ink: #a94a16;
+  --danger: #b0442f; --danger-deep: #8c3322; --warning: #9a5d12;
+  --group-bg: #fde3a2; --group-ink: #5a3a12; --group-muted: #74552a; --group-line: #eccb7d;
+  --read-accent: #8fb070; --read-pill-bg: #dcebcb; --chip-on-tint: rgba(255, 255, 255, 0.75);
+  --sidebar-bg: #f6c452; --sidebar-ink: #4a3117; --sidebar-muted: #6b4d2c; --sidebar-hover: #f9d47c; --sidebar-hover-ink: #4a3117;
+  --sidebar-active-bg: #fff6df; --sidebar-active-ink: #4a3117; --brand-mark: #a8620c;
+  --capture-bg: #fff6df; --capture-pressed: #fde4a6; --capture-ink: #7a4607;
+  --timer-line: #7d5a37; --timer-disabled-bg: #7a5a3a; --timer-disabled-ink: #f1dcb4; --track: #f5e6c6;
+  --pill-sky-ink: #5a4a33; --pill-tigger-ink: #6b4a14; --pill-eeyore-ink: #6b5843; --pill-berry-bg: #fbe5dc; --pill-berry-ink: #9a3a26;
+  --placeholder: #8f7252; --table-head: #fff3d6; --hover: #fff6e3; --menu-active-bg: #fde9b8; --menu-active-hover: #fde0a0; --info: #6e4f2e;
+  --shadow: 0 2px 10px rgba(166, 110, 30, 0.06); --shadow-lg: 0 8px 26px rgba(166, 110, 30, 0.14); --shadow-ink: rgba(120, 80, 20, 0.18);
+  --chart-grid: #f3e6cc; --chart-zero: #f7efdf;
+  --chart-ramp-1: #e0a63a; --chart-ramp-2: #c4861c; --chart-ramp-3: #a8620c; --chart-ramp-4: #7a4607; --chart-ramp-5: #4f2d05;
+  --font-cute: 'ZCOOL KuaiLe', var(--font);
+}
+
+/* ───────── 黑金：暖黑侧栏、香槟金点缀 ───────── */
+:root[data-theme='blackgold'] {
+  --accent: #3d362b; --accent-deep: #7b6239; --accent-hover: #2b261f; --on-accent: #ffffff;
+  --charcoal: #242321; --sand: #cfbb90; --sand-deep: #7b6239; --stone: #d9d2c3;
+  --surface-warm: #f6f4ef; --surface-sand: #f1eadb; --text-on-dark: #f3efe6; --muted-on-dark: #c9c1b1;
+  --honey-soft: #ebe2cf; --honey-mist: #f6f2e8; --cream: #ffffff; --card: #ffffff;
+  --line: #ddd6c8; --line-soft: #ebe6dc; --ink: #1e1d1b; --ink-2: #4a4641; --ink-3: #6b665e;
+  --leaf: #5a6e3a; --leaf-soft: #e8ecdc; --piglet: #242321; --piglet-soft: #242321;
+  --sky: #4a4641; --sky-soft: #ece9e2; --eeyore: #66615a; --eeyore-soft: #f0eee9; --berry: #9d3d33;
+  --read-bg: #e6eef4; --read-hover: #dae6ef; --read-ink: #35566e; --read-muted: #4b6577; --read-line: #c4d5e2;
+  --line-card: #e6e0d4; --surface-muted: #efede8; --surface-soft: #f8f6f1;
+  --today-bg: #f7f3ea; --today-head: #efe6d2; --today-line: #cfbb90;
+  --ev-default-bg: #f5f0e4; --ev-checkin-bg: #ebe8e2; --ev-checkin-line: #c2bcb1;
+  --ev-break-bg: #f4f2ee; --ev-break-line: #d6d0c5; --ev-break-accent: #a39880;
+  --ev-meeting-bg: #efebe4; --ev-meeting-line: #cbc3b5; --ev-other-accent: #7d746a;
+  --block-bg: #f3ecdc; --block-line: #d8c8a2; --sand-line: #d6c49e; --sand-hover: #dccb9f; --sand-pressed: #b9a374;
+  --done-bg: #e8ece8; --done-line: #c6ccc6; --now-line: #a15c3c; --now-ink: #8e4e30;
+  --danger: #9d3d33; --danger-deep: #74302a; --warning: #7b6239;
+  --group-bg: #ece3cf; --group-ink: #2b261d; --group-muted: #5c5039; --group-line: #d9cba9;
+  --read-accent: #8aa3b8; --read-pill-bg: #d6e3ed; --chip-on-tint: rgba(255, 255, 255, 0.7);
+  --sidebar-bg: #242321; --sidebar-ink: #f3efe6; --sidebar-muted: #bdb5a4; --sidebar-hover: #34322e; --sidebar-hover-ink: #ffffff;
+  --sidebar-active-bg: #cfbb90; --sidebar-active-ink: #1e1d1b; --brand-mark: #cfbb90;
+  --capture-bg: #f1eadb; --capture-pressed: #e3d7bd; --capture-ink: #2b261d;
+  --timer-line: #5a5751; --timer-disabled-bg: #4a4844; --timer-disabled-ink: #d8d2c6; --track: #ebe5d8;
+  --pill-sky-ink: #4a4641; --pill-tigger-ink: #5e4a26; --pill-eeyore-ink: #5e5953; --pill-berry-bg: #f6e6e2; --pill-berry-ink: #8c352c;
+  --placeholder: #77716a; --table-head: #f3f0e9; --hover: #f5f1e8; --menu-active-bg: #efe6d2; --menu-active-hover: #e7dcc2; --info: #4a4641;
+  --shadow-ink: rgba(20, 18, 15, 0.2);
+  --chart-grid: #ebe6dc; --chart-zero: #efede8;
+  --chart-ramp-1: #c2a978; --chart-ramp-2: #a68c5a; --chart-ramp-3: #7b6239; --chart-ramp-4: #4e3f26; --chart-ramp-5: #242321;
+}
+
+/* ───────── 海盐蓝：深海蓝侧栏、白底、雾蓝点缀 ───────── */
+:root[data-theme='seasalt'] {
+  --accent: #2d6a8f; --accent-deep: #1d4d6b; --accent-hover: #255a7a; --on-accent: #ffffff;
+  --charcoal: #2b3a48; --sand: #9fd0e6; --sand-deep: #2f6380; --stone: #cfdbe4;
+  --surface-warm: #f3f7fa; --surface-sand: #e3eff6; --text-on-dark: #eef5fa; --muted-on-dark: #c3d3df;
+  --honey-soft: #d4e6f1; --honey-mist: #ebf3f9; --cream: #ffffff; --card: #ffffff;
+  --line: #d3dee7; --line-soft: #e5ecf2; --ink: #142430; --ink-2: #3c5060; --ink-3: #5a6d7d;
+  --leaf: #3f7a5a; --leaf-soft: #e0efe6; --piglet: #2b3a48; --piglet-soft: #2b3a48;
+  --sky: #3c5060; --sky-soft: #e6eef4; --eeyore: #5d6b78; --eeyore-soft: #edf1f4; --berry: #a6463a;
+  --read-bg: #e2f0e9; --read-hover: #d4e8dd; --read-ink: #2f5a45; --read-muted: #456a57; --read-line: #b9d6c6;
+  --line-card: #dbe5ed; --surface-muted: #eef2f5; --surface-soft: #f6f9fb;
+  --today-bg: #eef6fb; --today-head: #dcecf6; --today-line: #8bbcd8;
+  --ev-default-bg: #edf4f9; --ev-checkin-bg: #e8edf1; --ev-checkin-line: #b8c6d1;
+  --ev-break-bg: #f1f4f6; --ev-break-line: #cfd8df; --ev-break-accent: #8aa0b0;
+  --ev-meeting-bg: #ebf0f5; --ev-meeting-line: #c2cfda; --ev-other-accent: #6c7f8e;
+  --block-bg: #e1eff7; --block-line: #a9cce0; --sand-line: #a9cce0; --sand-hover: #b5dcee; --sand-pressed: #83bfdc;
+  --done-bg: #e5efe9; --done-line: #c2d6ca; --now-line: #c0603a; --now-ink: #9c4a28;
+  --danger: #a6463a; --danger-deep: #7f342b; --warning: #8a6420;
+  --group-bg: #d9e9f3; --group-ink: #173a52; --group-muted: #3a5a70; --group-line: #b6d2e4;
+  --read-accent: #7fb196; --read-pill-bg: #cfe6d9; --chip-on-tint: rgba(255, 255, 255, 0.7);
+  --sidebar-bg: #24476a; --sidebar-ink: #eef4fa; --sidebar-muted: #bcd0e0; --sidebar-hover: #2e5a82; --sidebar-hover-ink: #ffffff;
+  --sidebar-active-bg: #cfe6f3; --sidebar-active-ink: #12324b; --brand-mark: #9fd0e6;
+  --capture-bg: #e8f2f9; --capture-pressed: #d4e6f1; --capture-ink: #1d4d6b;
+  --timer-line: #4a5b6a; --timer-disabled-bg: #46576a; --timer-disabled-ink: #d7e2ea; --track: #e1e9ef;
+  --pill-sky-ink: #34495a; --pill-tigger-ink: #2f5b74; --pill-eeyore-ink: #4f5d69; --pill-berry-bg: #f7e6e3; --pill-berry-ink: #93392e;
+  --placeholder: #6a7a87; --table-head: #eef4f8; --hover: #eef5fa; --menu-active-bg: #dcecf6; --menu-active-hover: #cfe4f2; --info: #3c5060;
+  --shadow-ink: rgba(20, 40, 60, 0.16);
+  --chart-grid: #e5ecf2; --chart-zero: #eef2f5;
+  --chart-ramp-1: #7aaccd; --chart-ramp-2: #5a95bb; --chart-ramp-3: #2d6a8f; --chart-ramp-4: #1d4d6b; --chart-ramp-5: #0f2f45;
+}
+
+/* ───────── 夜间深色：整页深色，夜里不刺眼 ───────── */
+:root[data-theme='night'] {
+  --accent: #8fbf73; --accent-deep: #a9d18f; --accent-hover: #a3cc8a; --on-accent: #10170b;
+  --charcoal: #111316; --sand: #d8c48f; --sand-deep: #d0b97f; --stone: #3a3f47;
+  --surface-warm: #16181c; --surface-sand: #2c2a22; --text-on-dark: #eceef1; --muted-on-dark: #a9b0ba;
+  --honey-soft: #2a3a22; --honey-mist: #222b1e; --cream: #16181c; --card: #1f2228;
+  --line: #363b45; --line-soft: #2b2f37; --ink: #e6e8eb; --ink-2: #b9bfc8; --ink-3: #959da8;
+  --leaf: #8fbf73; --leaf-soft: #253020; --piglet: #2f333b; --piglet-soft: #2f333b;
+  --sky: #b9bfc8; --sky-soft: #2a2f37; --eeyore: #959da8; --eeyore-soft: #272b32; --berry: #e8907f;
+  --read-bg: #1f2e27; --read-hover: #26382f; --read-ink: #a8d4b9; --read-muted: #8fb59e; --read-line: #2f4a3c;
+  --line-card: #30343d; --surface-muted: #23262c; --surface-soft: #22252b;
+  --today-bg: #232b22; --today-head: #2a3527; --today-line: #5e7f4d;
+  --ev-default-bg: #2a2a23; --ev-checkin-bg: #2a2d33; --ev-checkin-line: #454a53;
+  --ev-break-bg: #26282d; --ev-break-line: #3c4048; --ev-break-accent: #8a8170;
+  --ev-meeting-bg: #2b2a27; --ev-meeting-line: #45423c; --ev-other-accent: #9a8f80;
+  --block-bg: #263022; --block-line: #3f5434; --sand-line: #5a4e34; --sand-hover: #e2d2a6; --sand-pressed: #c4ad73;
+  --done-bg: #222a24; --done-line: #34413a; --now-line: #e0855a; --now-ink: #f0a07a;
+  --danger: #e8907f; --danger-deep: #8a3a2c; --warning: #d9b46a;
+  --group-bg: #26301f; --group-ink: #d5e6c6; --group-muted: #a9c093; --group-line: #3a4a30;
+  --read-accent: #5f9a78; --read-pill-bg: #284034; --chip-on-tint: rgba(255, 255, 255, 0.08);
+  --sidebar-bg: #111316; --sidebar-ink: #dfe3e8; --sidebar-muted: #9aa2ad; --sidebar-hover: #1f2329; --sidebar-hover-ink: #ffffff;
+  --sidebar-active-bg: #2d3a27; --sidebar-active-ink: #cfe8bd; --brand-mark: #8fbf73;
+  --capture-bg: #23272e; --capture-pressed: #2c313a; --capture-ink: #cfe8bd;
+  --timer-line: #3a3f47; --timer-disabled-bg: #2f333b; --timer-disabled-ink: #9aa2ad; --track: #2b3038;
+  --pill-sky-ink: #c3c9d2; --pill-tigger-ink: #e3cf9c; --pill-eeyore-ink: #b5bcc6; --pill-berry-bg: #3a2522; --pill-berry-ink: #f0a69a;
+  --placeholder: #858d98; --table-head: #23262c; --hover: #262a31; --menu-active-bg: #2a3624; --menu-active-hover: #303d29; --info: #b9bfc8;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.25); --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4); --shadow-ink: rgba(0, 0, 0, 0.45);
+  --chart-grid: #2b2f37; --chart-zero: #23262c;
+  --chart-ramp-1: #3d5a30; --chart-ramp-2: #557a42; --chart-ramp-3: #6f9a57; --chart-ramp-4: #8fbf73; --chart-ramp-5: #c3e2ae;
+  color-scheme: dark;
+}

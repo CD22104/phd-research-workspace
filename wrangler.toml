@@ -1,0 +1,12 @@
+name = "choose-project-name"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-07-18"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "choose-project-name"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[vars]
+TIMEZONE = "Asia/Singapore"

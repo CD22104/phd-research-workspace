@@ -1,0 +1,201 @@
+/* Preserve the original green / white / sand palette; use neutral dark gray for contrast. */
+:root {
+  --accent: #486432;
+  --accent-deep: #304620;
+  --charcoal: #424242;
+  --sand: #c2af89;
+  --sand-deep: #786038;
+  --stone: #d0cdc4;
+  --surface-warm: #f6f5f0;
+  --surface-sand: #eee8da;
+  --text-on-dark: #f5f4ed;
+  --muted-on-dark: #ced0c3;
+  --honey: var(--accent);
+  --honey-deep: var(--accent-deep);
+  --honey-soft: #dce5cd;
+  --honey-mist: #edf1e6;
+  --cream: #ffffff;
+  --card: #ffffff;
+  --line: #d7d9cf;
+  --line-soft: #e8e9e2;
+  --ink: #191c16;
+  --ink-2: #464b40;
+  --ink-3: #6b6d63;
+  --leaf: var(--accent);
+  --leaf-soft: #e5ecd9;
+  --piglet: var(--charcoal);
+  --piglet-soft: var(--charcoal);
+  --sky: #454a40;
+  --sky-soft: #e7e9e2;
+  --tigger: var(--sand-deep);
+  --tigger-soft: var(--surface-sand);
+  --eeyore: #62665b;
+  --eeyore-soft: #efeee9;
+  --berry: #a03f34;
+  --radius: 14px;
+  --shadow: 0 2px 8px rgba(25, 28, 22, 0.025);
+  --shadow-lg: 0 8px 24px rgba(25, 28, 22, 0.08);
+  --font: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Roboto, sans-serif;
+  --font-cute: var(--font);
+  --read-bg: #e5ece6;
+  --read-hover: #d9e4dc;
+  --read-ink: #425d4b;
+  --read-muted: #566459;
+  --read-line: #bdcec1;
+  /* 以下变量由各皮肤覆盖（themes.css）；默认值就是抹茶橄榄 */
+  --paper: var(--card);
+  --accent-hover: #3b5428;
+  --line-card: #e8e3da;
+  --surface-muted: #f0efeb;
+  --surface-soft: #f7f6f2;
+  --today-bg: #f5f8f1;
+  --today-head: #e7eddd;
+  --today-line: #a4b591;
+  --ev-default-bg: #f6f2e9;
+  --ev-checkin-bg: #ece9e3;
+  --ev-checkin-line: #bcb8af;
+  --ev-break-bg: #f4f2ed;
+  --ev-break-line: #d3ccbf;
+  --ev-break-accent: #a1947c;
+  --ev-meeting-bg: #eeeae2;
+  --ev-meeting-line: #c4bdb0;
+  --ev-other-accent: #81776b;
+  --block-bg: #eaf0e1;
+  --block-line: #b7c4a8;
+  --sand-line: #cbb895;
+  --sand-hover: #cfbe9c;
+  --sand-pressed: #b3a07a;
+  --done-bg: #e7ece7;
+  --done-line: #c3ccc3;
+  --now-line: #a36245;
+  --now-ink: #975335;
+  --danger: #9d4334;
+  --danger-deep: #77382e;
+  --warning: #876332;
+  --group-bg: #d6dfca;
+  --group-ink: #293e22;
+  --group-muted: #48593d;
+  --group-line: #bdcbb0;
+  --read-accent: #8ca692;
+  --read-pill-bg: #d1e0d4;
+  --chip-on-tint: rgba(255, 255, 255, 0.7);
+  --sidebar-bg: var(--accent);
+  --sidebar-ink: #f0f2e9;
+  --sidebar-muted: #d6decb;
+  --sidebar-hover: #3b5428;
+  --sidebar-hover-ink: #ffffff;
+  --on-accent: #ffffff;
+  --sidebar-active-bg: var(--sand);
+  --sidebar-active-ink: #25231f;
+  --brand-mark: var(--sand);
+  --capture-bg: #f5f2e9;
+  --capture-pressed: #e8e2d5;
+  --capture-ink: var(--accent-deep);
+  --timer-bg: var(--charcoal);
+  --timer-line: #737373;
+  --timer-disabled-bg: #626262;
+  --timer-disabled-ink: #e7e3da;
+  --track: #e8e2d6;
+  --pill-sky-ink: #4d4942;
+  --pill-tigger-ink: #624b26;
+  --pill-eeyore-ink: #635d54;
+  --pill-berry-bg: #f8e9e4;
+  --pill-berry-ink: #93372d;
+  --placeholder: #77716a;
+  --table-head: #f5f3ee;
+  --hover: #f0f2e9;
+  --menu-active-bg: #e5ebd9;
+  --menu-active-hover: #dce5cd;
+  --info: #53504a;
+  --shadow-ink: rgba(37, 35, 31, 0.16);
+  --chart-grid: #ece8e1;
+  --chart-zero: #f0efeb;
+  --chart-ramp-1: #bea472;
+  --chart-ramp-2: #a2b188;
+  --chart-ramp-3: #708b50;
+  --chart-ramp-4: #486432;
+  --chart-ramp-5: #263b19;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--cream); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+body { min-height: 100vh; }
+a { color: var(--honey-deep); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { font-family: var(--font-cute); font-weight: 600; color: var(--ink); margin: 0; letter-spacing: -0.4px; }
+h1 { font-size: 28px; }
+h2 { font-size: 20px; }
+h3 { font-size: 17px; }
+
+.page { max-width: 1280px; margin: 0 auto; padding: 30px 32px 60px; }
+.page-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 26px; padding-bottom: 0; }
+.page-head .grow { flex: 1; }
+.muted { color: var(--ink-3); }
+.small { font-size: 12.5px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.grow { flex: 1; min-width: 0; }
+.spacer { height: 12px; }
+.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.card {
+  background: var(--card); border: 1px solid var(--line-card); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 24px;
+}
+.card + .card { margin-top: 20px; }
+.card-title { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.card-title h3 { flex: 1; }
+.card-title h3 { line-height: 1.5; }
+
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+@media (max-width: 960px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .page { padding: 14px 14px 90px; } h1 { font-size: 22px; } }
+
+.pill { display: inline-block; vertical-align: middle; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 2px 8px; border-radius: 6px; font-size: 12px; line-height: 20px; background: var(--surface-warm); color: var(--ink-2); border: 1px solid transparent; white-space: nowrap; }
+.pill.leaf { background: var(--leaf-soft); color: var(--accent-deep); border-color: transparent; }
+.pill.sky { background: var(--sky-soft); color: var(--pill-sky-ink); border-color: transparent; }
+.pill.piglet { background: var(--charcoal); color: var(--text-on-dark); border-color: var(--charcoal); }
+.pill.tigger { background: var(--surface-sand); color: var(--pill-tigger-ink); border-color: transparent; }
+.pill.eeyore { background: var(--eeyore-soft); color: var(--pill-eeyore-ink); border-color: transparent; }
+.pill.berry { background: var(--pill-berry-bg); color: var(--pill-berry-ink); border-color: transparent; }
+
+.empty { text-align: center; padding: 26px 10px; color: var(--ink-3); }
+.empty svg { width: 70px; height: 70px; opacity: 0.9; }
+.empty p { margin: 8px 0 0; }
+
+/* Markdown 正文 */
+.md { line-height: 1.75; font-size: 14.5px; word-break: break-word; }
+.md h1, .md h2, .md h3, .md h4 { font-family: var(--font); font-weight: 650; margin: 1.1em 0 0.5em; }
+.md h1 { font-size: 1.45em; } .md h2 { font-size: 1.25em; } .md h3 { font-size: 1.1em; }
+.md p { margin: 0.5em 0; }
+.md code { background: var(--honey-mist); padding: 1px 5px; border-radius: 5px; font-size: 0.9em; }
+.md pre { background: var(--surface-warm); border: 1px solid var(--line-soft); padding: 10px 12px; border-radius: 10px; overflow-x: auto; }
+.md pre code { background: none; padding: 0; }
+.md blockquote { margin: 0.6em 0; padding: 2px 12px; border-left: 3px solid var(--sand); color: var(--ink-2); }
+.md table { border-collapse: collapse; margin: 0.6em 0; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--line); padding: 4px 9px; }
+.md th { background: var(--honey-mist); }
+.md img { max-width: 100%; }
+.md ul, .md ol { padding-left: 1.4em; }
+.md .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+
+/* 表单里的小标签 */
+.field-label { font-size: 12.5px; color: var(--ink-2); margin-bottom: 4px; }
+.kv { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 6px 10px; font-size: 13.5px; }
+.kv > .k { color: var(--ink-3); }
+
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--honey); outline-offset: 3px; }
+::selection { background: var(--sand); color: var(--ink); }
+@media (max-width: 640px) { .card { padding: 18px; } .page-head { margin-bottom: 20px; padding-bottom: 0; } .card + .card { margin-top: 16px; } }
+
+/* Keep the floating mobile navigation clear of the last page controls. */
+@media (max-width: 800px) { .page { padding-bottom: calc(104px + env(safe-area-inset-bottom)); } }
+
+.pill.read { background: var(--read-pill-bg); color: var(--read-ink); border-color: transparent; }
+
+.paper-read .muted { color:var(--read-muted); }

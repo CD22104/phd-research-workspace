@@ -1,0 +1,13 @@
+论文名称,Status,分组,Level,Topic Tags,加入原因,来源,来源网址,加入时间,发布日期,简介,阅读时间,阅读部分,My Question,主要团队,Paper Card,附件
+Attention Is All You Need,Done,基础阅读,P1,"能力侧/Survey, Transformer",序列建模的基本结构,NeurIPS 2017,https://arxiv.org/abs/1706.03762,2026/09/01,2017/06/12,完全基于注意力的序列模型,2026/09/03,§3 模型结构,多头注意力的必要性有多大？,Google,,
+"ReAct: Synergizing Reasoning and Acting in Language Models",Done,方法储备,P2,能力侧,推理与工具调用,ICLR 2023,https://arxiv.org/abs/2210.03629,2026/09/02,2022/10/06,推理与行动交替进行,2026/09/05,§2–§4,,Princeton,,
+Toolformer: Language Models Can Teach Themselves to Use Tools,To Read,方法储备,P2,能力侧,推理与工具调用,NeurIPS 2023,https://arxiv.org/abs/2302.04761,2026/09/02,2023/02/09,模型自己学习何时调用工具,,,,Meta,,
+Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,To Read,方法储备,P1,"能力侧, Prompting",推理与工具调用,NeurIPS 2022,https://arxiv.org/abs/2201.11903,2026/09/03,2022/01/28,在提示里给出推理步骤,,,,Google,,
+Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks,To Read,前沿跟踪,P0,RAG,检索什么时候帮倒忙？,NeurIPS 2020,https://arxiv.org/abs/2005.11401,2026/09/04,2020/05/22,把检索到的文档作为生成条件,,§2 方法,,Meta,,
+Self-RAG: Learning to Retrieve Generate and Critique through Self-Reflection,To Read,前沿跟踪,P0,RAG,检索什么时候帮倒忙？,ICLR 2024,https://arxiv.org/abs/2310.11511,2026/09/04,2023/10/17,模型自己决定何时检索,,,,UW,,
+LoRA: Low-Rank Adaptation of Large Language Models,Done,方法储备,P1,能力侧,高效微调,ICLR 2022,https://arxiv.org/abs/2106.09685,2026/09/05,2021/06/17,低秩矩阵高效微调,2026/09/08,§4 方法,,Microsoft,,
+Scaling Laws for Neural Language Models,Scan,基础阅读,P2,背景侧/Survey,规模与性能,arXiv,https://arxiv.org/abs/2001.08361,2026/09/05,2020/01/23,规模、数据与损失的幂律,2026/09/09,摘要与图表,,OpenAI,,
+Deep Residual Learning for Image Recognition,Giveup,基础阅读,P3,视觉,视觉基础,CVPR 2016,https://arxiv.org/abs/1512.03385,2026/09/06,2015/12/10,残差连接,2026/09/10,,和当前方向关系不大,MSRA,,
+Learning Transferable Visual Models From Natural Language Supervision,To Read,前沿跟踪,P2,多模态,图文对齐,ICML 2021,https://arxiv.org/abs/2103.00020,2026/09/07,2021/02/26,图文对比学习,,,,OpenAI,,
+Direct Preference Optimization: Your Language Model is Secretly a Reward Model,To Read,方法储备,P2,对齐,偏好学习,王老师,,2026/09/08,2023/05/29,不训练奖励模型直接优化,,,,Stanford,,
+Denoising Diffusion Probabilistic Models,To Read,前沿跟踪,P3,生成模型,生成模型,NeurIPS 2020,https://arxiv.org/abs/2006.11239,2026/09/08,2020/06/19,扩散模型经典形式,,,,UC Berkeley,,

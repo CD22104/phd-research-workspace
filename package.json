@@ -1,0 +1,40 @@
+{
+  "name": "phd-research-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "prebuild": "python3 scripts/package_macos.py",
+    "dev:web": "vite",
+    "build": "vite build",
+    "dev": "wrangler pages dev --port 8788 --local-protocol http",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "db:remote": "wrangler d1 migrations apply DB --remote",
+    "test": "python3 -B -m unittest discover -s tests -p test_cf_setup.py -v && node --test tests/test_import_batch.mjs tests/test_migration_sql.mjs && node --test tests/test_macos_bridge.mjs tests/test_calendar_summary.mjs tests/test_deadlines.mjs tests/test_conference_state.mjs tests/test_conference_catalog.mjs tests/test_day_timeline.mjs",
+    "deploy": "npm run build && wrangler pages deploy",
+    "typecheck": "tsc -p tsconfig.json",
+    "test:import": "node --test tests/test_import_batch.mjs",
+    "test:feed-bridge": "bash scripts/test_feed_bridge.sh"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "hono": "^4.13.9"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vscode/markdown-it-katex": "^1.1.2",
+    "dompurify": "^3.4.16",
+    "echarts": "^6.1.0",
+    "katex": "^0.16.47",
+    "markdown-it": "^15.0.2",
+    "naive-ui": "^2.45.3",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vue": "^3.5.43",
+    "vue-echarts": "^8.3.0",
+    "vue-router": "^4.6.4",
+    "wrangler": "^4.86.0"
+  },
+  "license": "MIT"
+}
