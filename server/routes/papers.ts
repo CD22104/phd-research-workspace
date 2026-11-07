@@ -4,6 +4,7 @@ import type { App } from '../app';
 import { json } from '../http';
 import { all, bad, conflict, first, idParam, insert, int, notFound, remove, run, stmt, update, type Ctx } from '../db';
 import { body } from './planning';
+import { attachmentCleanup, listAttachments, noteAttachmentCleanup } from './attachments';
 import { nowIso, todayLocal, isDate } from '../lib/time';
 import { byIds, byTitle } from '../lib/arxiv';
 import { commitImport, importSummary, previewImport, undoImport } from '../lib/importer';
@@ -80,6 +81,7 @@ export function registerPapers(app: App) {
     return json(c, {
       paper: { ...paper, tags: safeJson(paper.tags, []), links: safeJson(paper.links, []) },
       plans, logs, notes, ideas, projects, recommendations: recs, changes, minutes: minutes?.m || 0, possible_dup: dup,
+      attachments: await listAttachments(ctx, 'paper', id),
       reading: readingState(plans),
     });
   });
@@ -153,13 +155,16 @@ export function registerPapers(app: App) {
     const id = idParam(c.req.param('id'));
     const b = { confirm: c.req.query('confirm') === '1' };
     const counts = await first(ctx.db, `SELECT (SELECT COUNT(*) FROM notes WHERE paper_id = ?1) AS notes, (SELECT COUNT(*) FROM reading_plans WHERE paper_id = ?1) AS plans,
-      (SELECT COUNT(*) FROM reading_logs WHERE paper_id = ?1) AS logs`, id);
+      (SELECT COUNT(*) FROM reading_logs WHERE paper_id = ?1) AS logs,
+      (SELECT COUNT(*) FROM attachments WHERE (owner_type = 'paper' AND owner_id = ?1) OR (owner_type = 'note' AND owner_id IN (SELECT id FROM notes WHERE paper_id = ?1))) AS attachments`, id);
     needConfirm(ctx, b, { delete_paper: id, ...counts });
     await remove(ctx, 'papers', id, [
       stmt(ctx.db, 'DELETE FROM reading_logs WHERE paper_id = ?', id),
       stmt(ctx.db, 'UPDATE tasks SET plan_id = NULL WHERE plan_id IN (SELECT id FROM reading_plans WHERE paper_id = ?)', id),
       stmt(ctx.db, 'UPDATE sessions SET plan_id = NULL WHERE plan_id IN (SELECT id FROM reading_plans WHERE paper_id = ?)', id),
       stmt(ctx.db, 'DELETE FROM reading_plans WHERE paper_id = ?', id),
+      ...noteAttachmentCleanup(ctx, 'paper_id', id),
+      ...attachmentCleanup(ctx, 'paper', id),
       stmt(ctx.db, 'DELETE FROM notes WHERE paper_id = ?', id),
       stmt(ctx.db, 'DELETE FROM recommendations WHERE paper_id = ?', id),
       stmt(ctx.db, 'DELETE FROM idea_papers WHERE paper_id = ?', id),
@@ -201,6 +206,7 @@ export function registerPapers(app: App) {
       stmt(ctx.db, 'UPDATE reading_plans SET paper_id = ? WHERE paper_id = ?', target, id),
       stmt(ctx.db, 'UPDATE reading_logs SET paper_id = ? WHERE paper_id = ?', target, id),
       stmt(ctx.db, 'UPDATE notes SET paper_id = ? WHERE paper_id = ?', target, id),
+      stmt(ctx.db, "UPDATE attachments SET owner_id = ? WHERE owner_type = 'paper' AND owner_id = ?", target, id),
       stmt(ctx.db, 'UPDATE OR IGNORE idea_papers SET paper_id = ? WHERE paper_id = ?', target, id),
       stmt(ctx.db, "UPDATE OR IGNORE project_links SET item_id = ? WHERE item_type = 'paper' AND item_id = ?", target, id),
       stmt(ctx.db, 'UPDATE tasks SET paper_id = ? WHERE paper_id = ?', target, id),
@@ -351,7 +357,7 @@ export function registerPapers(app: App) {
       LEFT JOIN projects pr ON pr.id = n.project_id LEFT JOIN ideas i ON i.id = n.idea_id
       WHERE n.id = ?`, idParam(c.req.param('id')));
     if (!note) throw notFound('笔记');
-    return json(c, note);
+    return json(c, { ...note, attachments: await listAttachments(ctx, 'note', note.id) });
   });
 
   app.post('/notes', async (c) => {
@@ -389,7 +395,7 @@ export function registerPapers(app: App) {
     const ctx = c.get('ctx');
     const id = idParam(c.req.param('id'));
     needConfirm(ctx, { confirm: c.req.query('confirm') === '1' }, { delete_note: id });
-    await remove(ctx, 'notes', id);
+    await remove(ctx, 'notes', id, attachmentCleanup(ctx, 'note', id));
     return json(c, { ok: true });
   });
 

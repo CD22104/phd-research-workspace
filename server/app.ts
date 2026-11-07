@@ -12,6 +12,7 @@ import { registerMisc } from './routes/misc';
 import { registerCalendar } from './routes/calendar';
 import { registerTimeBlocks } from './routes/time_blocks';
 import { registerPaperMetadata } from './routes/paper_metadata';
+import { registerAttachments } from './routes/attachments';
 
 export type App = Hono<{ Bindings: Env; Variables: { ctx: Ctx } }>;
 
@@ -84,5 +85,6 @@ registerPaperGroups(app);
 registerCalendar(app);
 registerTimeBlocks(app);
 registerPaperMetadata(app);
+registerAttachments(app);
 
 registerConferences(app);

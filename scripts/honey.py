@@ -11,6 +11,7 @@
   honey.py import 文件 [--kind feishu|claude|chatgpt|paste] [--name 来源名] [--stage library|candidate] [--no-enrich] [--yes]
   honey.py export 输出.json                 # 完整导出（所有表）
   honey.py markdown 导出.json 目录           # 把导出转成便于阅读的 Markdown（单向）
+  honey.py attach idea|paper|note 编号 文件 [--name 文件名] [--note 备注]   # 上传附件（≤10MB），打印下载链接
 """
 import argparse
 import hashlib
@@ -242,6 +243,23 @@ def cmd_feed_upload(a):
     print(json.dumps({"ok": True, "run_id": result["run"]["id"], "items": result["items"], "replayed": bool(result.get("replayed"))}, ensure_ascii=False))
 
 
+def cmd_attach(a):
+    import base64
+    p = Path(a.file)
+    if not p.is_file():
+        sys.exit(f"找不到文件：{p}")
+    data = p.read_bytes()
+    if len(data) > 10 * 1024 * 1024:
+        sys.exit(f"文件 {len(data) / 1024 / 1024:.1f} MB，超过单个附件上限 10 MB")
+    name = a.name or p.name
+    key = "att-" + hashlib.sha256(data + f"{a.owner_type}:{a.owner_id}:{name}".encode()).hexdigest()[:32]
+    r = call("POST", "/attachments", {"owner_type": a.owner_type, "owner_id": a.owner_id, "filename": name, "note": a.note,
+                                      "data_base64": base64.b64encode(data).decode()}, {"Idempotency-Key": key})
+    url = CFG["HONEY_URL"].rstrip("/") + f"/api/attachments/{r['id']}/download"
+    print(json.dumps({"ok": True, "id": r["id"], "filename": r["filename"], "size": r["size"], "sha256": r["sha256"],
+                      "duplicate": bool(r.get("duplicate") or r.get("replayed")), "download": url}, ensure_ascii=False))
+
+
 def main():
     ap = argparse.ArgumentParser(description="研究工作台命令行")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -264,6 +282,12 @@ def main():
     i.add_argument("--yes", action="store_true")
     e = sub.add_parser("export")
     e.add_argument("out")
+    t = sub.add_parser("attach", help="把文件作为附件挂到 Idea / 论文 / 笔记下")
+    t.add_argument("owner_type", choices=["idea", "paper", "note"])
+    t.add_argument("owner_id", type=int)
+    t.add_argument("file")
+    t.add_argument("--name", help="保存的文件名，默认用原文件名")
+    t.add_argument("--note")
     m = sub.add_parser("markdown")
     m.add_argument("json")
     m.add_argument("dir")
@@ -280,6 +304,8 @@ def main():
         cmd_export(a)
     elif a.cmd == "markdown":
         cmd_markdown(a)
+    elif a.cmd == "attach":
+        cmd_attach(a)
 
 
 if __name__ == "__main__":

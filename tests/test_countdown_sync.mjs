@@ -23,24 +23,24 @@ try{
  await visible(other,'cvpr-2027');await visible(device,'cvpr-2027');
  const draft=other.getByTestId('new-day-task-title').locator('input');await draft.fill('未保存的日任务草稿');
  await p.getByTestId('conference-cvpr-2027').waitFor();
- // Hold a bootstrap from an earlier change, then confirm NAACL before it returns.
+ // Hold a bootstrap from an earlier change, then confirm IJCAI before it returns.
  const stale=deferred(),release=deferred(),delivered=deferred();let first=true;
  await p.route('**/api/bootstrap',async route=>{
   if(!first){await route.continue();return;}first=false;
   const response=await route.fetch();stale.resolve();await release.promise;await route.fulfill({response});delivered.resolve();
  });
  await p.getByRole('button',{name:'取消置顶 CVPR 2027',exact:true}).click();await stale.promise;
- await p.getByRole('button',{name:'计划投稿 NAACL 2027',exact:true}).click();
+ await p.getByRole('button',{name:'计划投稿 IJCAI 2027',exact:true}).click();
  const dialog=p.getByTestId('submission-plan-dialog');await dialog.waitFor();
  await dialog.getByRole('button',{name:'确认投稿计划',exact:true}).click();await dialog.waitFor({state:'hidden'});
  await p.locator('aside').getByText('今日',{exact:true}).click();
- await visible(p,'naacl-2027');await visible(p,'cvpr-2027');
- assert.match(await target(p,'naacl-2027').innerText(),/ARR 正文投稿截止[\s\S]*还剩/);
+ await visible(p,'ijcai-2027');await visible(p,'cvpr-2027');
+ assert.match(await target(p,'ijcai-2027').innerText(),/摘要截止[\s\S]*还剩/);
  release.resolve();await delivered.promise;await p.unroute('**/api/bootstrap');
- await p.waitForTimeout(300);await visible(p,'naacl-2027');
- report.push('confirm NAACL then sidebar Today: distinct NAACL + CVPR countdowns; late bootstrap cannot undo the saved plan');
- await visible(other,'naacl-2027');assert.equal(await draft.inputValue(),'未保存的日任务草稿');
- await device.evaluate(()=>window.dispatchEvent(new Event('focus')));await visible(device,'naacl-2027');
+ await p.waitForTimeout(300);await visible(p,'ijcai-2027');
+ report.push('confirm IJCAI then sidebar Today: distinct IJCAI + CVPR countdowns; late bootstrap cannot undo the saved plan');
+ await visible(other,'ijcai-2027');assert.equal(await draft.inputValue(),'未保存的日任务草稿');
+ await device.evaluate(()=>window.dispatchEvent(new Event('focus')));await visible(device,'ijcai-2027');
  report.push('already-open tab updates immediately; separate browser context refreshes on focus; unsaved task draft survives');
  // Invalidation during an older GET must queue a new GET, not disappear.
  const readStarted=deferred(),releaseRead=deferred();let readCount=0;
@@ -51,12 +51,12 @@ try{
  });
  await other.getByRole('button',{name:'刷新投稿倒计时',exact:true}).click();await readStarted.promise;
  await p.locator('aside').getByText('投稿',{exact:true}).click();
- await p.getByRole('button',{name:'管理投稿计划 NAACL 2027',exact:true}).click();await dialog.waitFor();
+ await p.getByRole('button',{name:'管理投稿计划 IJCAI 2027',exact:true}).click();await dialog.waitFor();
  await dialog.getByRole('button',{name:'取消投稿计划',exact:true}).click();await dialog.waitFor({state:'hidden'});
- releaseRead.resolve();await hidden(other,'naacl-2027');assert(readCount>=2);
+ releaseRead.resolve();await hidden(other,'ijcai-2027');assert(readCount>=2);
  await other.unroute('**/api/conferences');
- await p.locator('aside').getByText('今日',{exact:true}).click();await hidden(p,'naacl-2027');await visible(p,'cvpr-2027');
- await device.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await hidden(device,'naacl-2027');
+ await p.locator('aside').getByText('今日',{exact:true}).click();await hidden(p,'ijcai-2027');await visible(p,'cvpr-2027');
+ await device.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await hidden(device,'ijcai-2027');
  assert.equal(await draft.inputValue(),'未保存的日任务草稿');
  report.push('cancellation removes target across tabs; invalidation during in-flight GET triggers a fresh read; visibility refresh works');
  await other.route('**/api/conferences',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'测试连接失败'})}),{times:1});
@@ -65,18 +65,18 @@ try{
  await other.locator('.sync-error').getByRole('button',{name:'重试',exact:true}).click();await other.locator('.sync-error').waitFor({state:'hidden'});
  report.push('failed refresh preserves saved targets and drafts; inline retry recovers without reloading the page');
  // Pending and past planned conferences need a named status instead of disappearing.
- for(const conf of await conferences())if(['cvpr-2027','acl-2027','iclr-2027','naacl-2027'].includes(conf.key))await api('PATCH','/conferences/'+conf.key,{base_version:conf.version,planned:true,pinned:conf.key==='cvpr-2027'});
+ for(const conf of await conferences())if(['cvpr-2027','acl-2027','iclr-2027','ijcai-2027'].includes(conf.key))await api('PATCH','/conferences/'+conf.key,{base_version:conf.version,planned:true,pinned:conf.key==='cvpr-2027'});
  await p.getByRole('button',{name:'刷新投稿倒计时',exact:true}).click();await visible(p,'acl-2027');
  assert.match(await target(p,'acl-2027').innerText(),/日期待公布/);assert.equal(await target(p,'acl-2027').locator('.countdown-node').count(),0);
  assert.match(await target(p,'iclr-2027').innerText(),/新投稿已截止/);assert.equal(await target(p,'iclr-2027').locator('.countdown-node').count(),0);
  assert.equal(await target(p,'cvpr-2027').locator('.countdown-node').count(),2);
  const keys=await p.locator('.countdown-target').evaluateAll(els=>els.map(x=>x.dataset.testid));
- assert.deepEqual(keys,['countdown-target-cvpr-2027','countdown-target-naacl-2027','countdown-target-iclr-2027','countdown-target-acl-2027']);
+ assert.deepEqual(keys,['countdown-target-cvpr-2027','countdown-target-ijcai-2027','countdown-target-iclr-2027','countdown-target-acl-2027']);
  report.push('all planned targets have named entries: pinned first, nearest future next, past and undated statuses visible without fabricated countdowns');
  for(const width of [1440,390]){
   await p.setViewportSize({width,height:1100});
   for(const path of ['/','/week','/calendar']){
-   await p.goto(origin+path);await visible(p,'naacl-2027');await visible(p,'acl-2027');
+   await p.goto(origin+path);await visible(p,'ijcai-2027');await visible(p,'acl-2027');
    assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth),width,path+' overflow');
    if(path!=='/'){const a=await p.getByTestId('submission-countdown').boundingBox(),b=await p.locator(path==='/week'?'.week-layout':'.calendar-intro').boundingBox();assert(b.y-a.y-a.height>=24);}
    await p.screenshot({path:out+'/'+width+'-'+(path==='/'?'today':path.slice(1))+'.png',fullPage:path==='/'});

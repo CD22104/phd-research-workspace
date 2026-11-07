@@ -13,6 +13,7 @@ import { STATUS, READING_TONE, fmtMin, fmtDateTime, readingLabel, readFileText }
 import { startTimer, isRunning, stopTimer } from '../lib/timer';
 import Md from './Md.vue';
 import ItemPicker from './ItemPicker.vue';
+import Attachments from './Attachments.vue';
 import { MATERIAL, VERIFIED } from '../lib/paper-meta';
 
 const router = useRouter();
@@ -210,7 +211,8 @@ async function setStage(stage) {
 }
 async function remove() {
   const n = data.value.notes.length;
-  if (!(await confirm('删除这篇论文？', `会同时删除它的阅读计划、阅读记录${n ? `和 ${n} 篇笔记` : ''}。删除记录会保留在变更日志里。`, '删除'))) return;
+  const a = data.value.attachments?.length || 0;
+  if (!(await confirm('删除这篇论文？', `会同时删除它的阅读计划、阅读记录${n ? `、${n} 篇笔记` : ''}${a ? `、${a} 个附件` : ''}。删除记录会保留在变更日志里，附件文件删除后无法恢复。`, '删除'))) return;
   await api.del(`/papers/${store.paperId}`);
   store.paperId = null;
   changed();
@@ -359,6 +361,11 @@ const tone = (s) => READING_TONE[s] || '';
                   <Md :src="n.content" />
                 </NCollapseItem>
               </NCollapse>
+            </NTabPane>
+
+            <!-- 附件 -->
+            <NTabPane name="files" :tab="`附件（${data.attachments?.length || 0}）`">
+              <Attachments owner-type="paper" :owner-id="data.paper.id" title="这篇论文的附件" @changed="load" />
             </NTabPane>
 
             <!-- 关联 -->

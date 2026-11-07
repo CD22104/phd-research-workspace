@@ -414,6 +414,7 @@ export async function undoImport(ctx: Ctx, sourceId: number) {
   const papers = await all(ctx.db, `SELECT p.*,
     (SELECT COUNT(*) FROM changes WHERE entity = 'paper' AND entity_id = p.id AND op = 'update' AND (source_id IS NULL OR source_id != ?1)) AS edits,
     (SELECT COUNT(*) FROM notes WHERE paper_id = p.id) AS notes,
+    (SELECT COUNT(*) FROM attachments WHERE owner_type = 'paper' AND owner_id = p.id) AS attachments,
     (SELECT COUNT(*) FROM reading_logs l LEFT JOIN reading_plans rp ON rp.id = l.plan_id WHERE l.paper_id = p.id AND (rp.source_id IS NULL OR rp.source_id != ?1)) AS logs,
     (SELECT COUNT(*) FROM sessions WHERE paper_id = p.id) AS sessions,
     (SELECT COUNT(*) FROM tasks t WHERE t.paper_id = p.id OR EXISTS (SELECT 1 FROM json_each(t.paper_ids) j WHERE j.value = p.id)
@@ -433,7 +434,7 @@ export async function undoImport(ctx: Ctx, sourceId: number) {
     if (paper.source_id !== sourceId) continue;
     const id = paper.id;
     const why = [
-      paper.edits && '你改过它的字段', paper.notes && '已有笔记', paper.logs && '已有阅读记录', paper.sessions && '有计时记录',
+      paper.edits && '你改过它的字段', paper.notes && '已有笔记', paper.attachments && '已有附件', paper.logs && '已有阅读记录', paper.sessions && '有计时记录',
       paper.recs && '也来自其他来源', paper.plans && '有其他阅读计划', paper.task_links && '已安排到日计划', paper.goal_task_links && '已关联周子任务',
     ].filter(Boolean);
     if (why.length) {
@@ -445,6 +446,7 @@ export async function undoImport(ctx: Ctx, sourceId: number) {
     batch.guard(`EXISTS (SELECT 1 FROM papers p WHERE p.id = ? AND p.updated_at IS ?
       AND NOT EXISTS (SELECT 1 FROM changes WHERE entity = 'paper' AND entity_id = p.id AND op = 'update' AND (source_id IS NULL OR source_id != ?))
       AND NOT EXISTS (SELECT 1 FROM notes WHERE paper_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM attachments WHERE owner_type = 'paper' AND owner_id = p.id)
       AND NOT EXISTS (SELECT 1 FROM reading_logs l LEFT JOIN reading_plans rp ON rp.id = l.plan_id WHERE l.paper_id = p.id AND (rp.source_id IS NULL OR rp.source_id != ?))
       AND NOT EXISTS (SELECT 1 FROM sessions WHERE paper_id = p.id)
       AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.paper_id = p.id OR EXISTS (SELECT 1 FROM json_each(t.paper_ids) j WHERE j.value = p.id)

@@ -9,7 +9,7 @@ const props=defineProps({projectId:Number,editable:Boolean});
 const selected=ref(null),busy=ref(false),now=useDeadlineClock();
 const linked=computed(()=>store.conferences.filter(c=>c.project_id===props.projectId&&c.planned));
 const options=computed(()=>store.conferences.filter(c=>!c.project_id||(c.project_id===props.projectId&&!c.planned)).map(c=>({label:c.name,value:c.key})));
-const next=c=>upcomingDeadlines([c],now.value)[0];
+const next=c=>upcomingDeadlines([c],now.value,store.timezone)[0];
 async function link(){if(!selected.value)return;busy.value=true;try{await updateConference(store.conferences.find(c=>c.key===selected.value),{project_id:props.projectId,planned:true});selected.value=null;}catch(e){fail(e)}finally{busy.value=false}}
 async function unlink(c){busy.value=true;try{await updateConference(c,{project_id:null})}catch(e){fail(e)}finally{busy.value=false}}
 </script>

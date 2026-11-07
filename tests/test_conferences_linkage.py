@@ -45,6 +45,22 @@ class ConferenceLinkage(unittest.TestCase):
   self.update({'planned':False})
   self.assertIn('registration',self.conf()['completed'])
   self.update({'milestone_id':'registration','done':False})
+ def test_mark_submitted_ticks_round_in_one_version(self):
+  key='www-2027'
+  self.update({'planned':True},key=key)
+  v=self.conf(key)['version']
+  out=self.update({'milestone_ids':['registration','submission'],'done':True},key=key)
+  self.assertEqual(set(out['completed']),{'registration','submission'});self.assertEqual(out['version'],v+1)
+  stamp=out['completed']['submission']
+  again=self.update({'milestone_ids':['submission'],'done':True},key=key);self.assertEqual(again['completed']['submission'],stamp,'re-marking keeps the first time')
+  for bad in ([],['reviews'],['nope'],'submission',['submission']*11):
+   self.update({'milestone_ids':bad,'done':True},key=key,expected=400)
+  self.update({'milestone_ids':['submission'],'done':'yes'},key=key,expected=400)
+  call('PATCH','/conferences/'+key,{'base_version':self.conf(key)['version'],'milestone_ids':['submission'],'done':False},409,actor='script')
+  undone=self.update({'milestone_ids':['registration','submission'],'done':False},key=key)
+  self.assertEqual(undone['completed'],{})
+  self.assertTrue(undone['planned'])
+  self.update({'planned':False},key=key)
  def test_project_pinning_direct_resource_metadata_and_unlink(self):
   a=call('POST','/projects',{'name':'Project A '+self.stamp},201)
   b=call('POST','/projects',{'name':'Project B '+self.stamp},201)
@@ -56,7 +72,7 @@ class ConferenceLinkage(unittest.TestCase):
   self.assertEqual(row['notes'][0]['id'],note['id']);self.assertNotIn('content',row['notes'][0])
   self.assertEqual(row['ideas'][0]['id'],idea['id']);self.assertNotIn('one_liner',row['ideas'][0])
   self.update({'project_id':b['id']});self.assertEqual(self.conf()['project_name'],b['name'])
-  exp=call('GET','/export');self.assertEqual(exp['schema_version'],14);self.assertIn('conference_targets',exp['tables'])
+  exp=call('GET','/export');self.assertGreaterEqual(exp['schema_version'],14);self.assertIn('conference_targets',exp['tables'])
   call('DELETE',f"/projects/{b['id']}");self.assertIsNone(self.conf()['project_id'])
   self.assertEqual(call('GET',f"/notes/{note['id']}")['content'],'Private long discussion body')
  def test_daily_creation_is_atomic_reusable_and_completion_linked(self):

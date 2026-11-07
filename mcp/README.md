@@ -1,6 +1,6 @@
 # Claude 接入研究工作台
 
-`honey-mcp.mjs` 是 stdio MCP 服务，共 29 个工具，使用 Node 内置模块，无需安装依赖。运行 MCP 的电脑需要 Node 18 或更新版本；网站需要先完成部署。
+`honey-mcp.mjs` 是 stdio MCP 服务，共 32 个工具，使用 Node 内置模块，无需安装依赖。运行 MCP 的电脑需要 Node 18 或更新版本；网站需要先完成部署。
 
 ## Claude 电脑端配置
 
@@ -39,8 +39,13 @@
 | 周目标 | `get_week`、`add_goal`、`update_goal` |
 | Idea | `list_ideas`、`get_idea`、`create_idea`、`link_paper_to_idea` |
 | 项目与整理 | `list_projects`、`create_project`、`capture`、`save_feed_result`、`get_stats` |
+| 附件 | `list_attachments`、`attach_file`、`delete_attachment` |
 
 新推荐的论文默认进候选区。覆盖个人字段、已有复盘、撤销导入或删除论文时，先查看预览，用户确认后才带 `confirm: true` 再次提交。标记为“不发送给外部模型”的 Idea 和笔记不会返回正文。
+
+## 附件
+
+`attach_file` 把运行 MCP 的这台电脑上的一个文件（最大 10 MB，例如 Excel、PDF）挂到 Idea、论文或笔记下，返回下载链接，可以写进正文：`[文件名](下载链接)`。同名、内容相同的文件重复上传只保存一次。`list_attachments` 只返回文件名、大小和链接，不把文件内容交给模型。`delete_attachment` 和删除论文一样，先返回预览，用户同意后带 `confirm: true` 才删除。
 
 ## 删除论文
 

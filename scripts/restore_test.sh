@@ -42,6 +42,17 @@ for table in ('goal_tasks', 'tasks'):
         WHERE j.type NOT IN ('integer', 'real') OR j.value != CAST(j.value AS INTEGER) OR NOT EXISTS(SELECT 1 FROM papers p WHERE p.id = j.value)''').fetchone()[0]
     failures += bool(invalid)
     print(f"{'✓' if not invalid else '✗'} {table} 多论文关联：{invalid} 项悬空")
+# 附件：恢复出的分块拼起来，大小和 SHA-256 都要与记录一致
+if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='attachments'").fetchone():
+    import base64, hashlib
+    bad = 0
+    rows = list(db.execute('SELECT id, size, sha256, chunk_count FROM attachments WHERE complete = 1'))
+    for a in rows:
+        parts = [r[0] for r in db.execute('SELECT data FROM attachment_chunks WHERE attachment_id = ? ORDER BY seq', (a['id'],))]
+        data = base64.b64decode(''.join(parts)) if parts else b''
+        bad += len(parts) != a['chunk_count'] or len(data) != a['size'] or hashlib.sha256(data).hexdigest() != a['sha256']
+    failures += bool(bad)
+    print(f"{'✓' if not bad else '✗'} 附件内容：{len(rows)} 个，{bad} 个与记录不一致")
 print('恢复演练通过' if not failures else f'恢复演练失败：{failures} 项不一致')
 sys.exit(1 if failures else 0)
 PY

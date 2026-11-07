@@ -22,7 +22,10 @@ try{
  await p.goto(origin+'/submissions');await details('cvpr-2027').waitFor();
  assert.equal(await p.locator('.conference-details').count(),1);
  const ids=await p.locator('.conference-card').evaluateAll(els=>els.map(e=>e.id));
- assert.deepEqual(ids.slice(0,6),['cvpr-2027','naacl-2027','sp-2027','usenix-security-2027','iclr-2027','ndss-2027']);
+ // 排序规则在 test_deadlines.mjs 用固定时间验证；这里确认页面按同一规则排列（写死的会议名单会随日期过期）
+ const {sortConferences}=await import('../web/src/lib/deadlines.js');
+ const expectedOrder=sortConferences((await api('GET','/conferences')).conferences,Date.now()).map(x=>x.key);
+ assert.equal(ids[0],'cvpr-2027');assert.deepEqual(ids,expectedOrder);
  const boxes=await p.locator('.conference-card').evaluateAll(els=>els.map(e=>{const r=e.getBoundingClientRect();return{x:r.x,width:r.width,height:r.height}}));
  assert(boxes.every(b=>b.x===boxes[0].x&&b.width===boxes[0].width));assert(boxes.slice(1).every(b=>b.height<135));
  assert.equal(await p.getByTestId('submission-countdown').count(),0);

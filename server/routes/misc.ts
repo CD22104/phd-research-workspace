@@ -420,10 +420,15 @@ export function registerMisc(app: App) {
   app.get('/export', async (c) => {
     const ctx = c.get('ctx');
     const tables = ['settings', 'sources', 'changes', 'projects', 'conference_targets', 'paper_groups', 'project_links', 'weeks', 'goals', 'goal_tasks', 'schedule_events', 'days', 'tasks', 'task_time_blocks', 'sessions', 'timer_pauses', 'background_sessions', 'papers', 'recommendations',
-      'reading_plans', 'reading_logs', 'notes', 'ideas', 'idea_papers', 'doc_versions', 'captures', 'feed_tasks', 'feed_runs', 'feed_items', 'feed_task_bindings', 'feed_report_versions'];
+      'reading_plans', 'reading_logs', 'notes', 'ideas', 'idea_papers', 'doc_versions', 'captures', 'feed_tasks', 'feed_runs', 'feed_items', 'feed_task_bindings', 'feed_report_versions', 'attachments'];
     const out: Record<string, any[]> = {};
     for (const t of tables) out[t] = await all(ctx.db, `SELECT * FROM ${t}`);
-    return json(c, { exported_at: nowIso(), schema_version: 14, tables: out });
+    // 附件内容（base64 分块）总量不大时一起导出；太大时只保存在 wrangler d1 export 的 .sql 快照里
+    const total = (out.attachments as any[]).reduce((s, a) => s + (a.size || 0), 0);
+    const omitted: string[] = [];
+    if (total <= 20 * 1024 * 1024) out.attachment_chunks = await all(ctx.db, 'SELECT * FROM attachment_chunks');
+    else omitted.push('attachment_chunks');
+    return json(c, { exported_at: nowIso(), schema_version: 15, tables: out, ...(omitted.length ? { omitted_tables: omitted } : {}) });
   });
 
   app.get('/health', (c) => json(c, { ok: true, defaults: Object.keys(DEFAULT_SETTINGS).length }));

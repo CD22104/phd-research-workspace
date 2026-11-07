@@ -10,6 +10,7 @@ import MdEditor from '../components/MdEditor.vue';
 import Md from '../components/Md.vue';
 import ItemPicker from '../components/ItemPicker.vue';
 import Empty from '../components/Empty.vue';
+import Attachments from '../components/Attachments.vue';
 
 const TEMPLATES = {
   idea: '## 一句话\n\n## 动机：为什么值得做\n\n## 核心想法\n\n## 和已有工作的区别\n\n## 怎么验证（最小实验）\n\n## 风险与可能的反例\n\n## 下一步\n',
@@ -107,7 +108,8 @@ async function create(kind) {
   }
 }
 async function remove() {
-  if (!(await confirm('删除这个 Idea？', '关联的论文不会被删除，只是解除关联。', '删除'))) return;
+  const a = cur.value.attachments?.length || 0;
+  if (!(await confirm('删除这个 Idea？', `关联的论文不会被删除，只是解除关联。${a ? `它的 ${a} 个附件会一起删除，无法恢复。` : ''}`, '删除'))) return;
   await api.del(`/ideas/${cur.value.idea.id}`);
   router.push('/ideas');
   changed();
@@ -212,6 +214,10 @@ const statusOpts = Object.entries(STATUS.idea).map(([value, label]) => ({ value,
           </div>
 
           <div class="card">
+            <Attachments owner-type="idea" :owner-id="cur.idea.id" />
+          </div>
+
+          <div class="card">
             <div class="card-title">
               <h3>关联论文</h3>
               <span class="small">关联 <b>{{ cur.papers.length }}</b> 篇；其中 <b>{{ cur.satisfied }}</b> 篇已完成本 Idea 所需的阅读目标</span>
@@ -276,6 +282,8 @@ const statusOpts = Object.entries(STATUS.idea).map(([value, label]) => ({ value,
 .title-input :deep(input) { font-family: var(--font-cute); font-size: 20px; }
 .save { white-space: nowrap; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.card-title { flex-wrap: wrap; row-gap: 4px; }
+.card-title h3 { white-space: nowrap; }
 .lp { padding: 8px 0; border-bottom: 1px dashed var(--line-soft); }
 .lp a { color: var(--ink); font-weight: 500; }
 .form { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px 10px; align-items: center; }

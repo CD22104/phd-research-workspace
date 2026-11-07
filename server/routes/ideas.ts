@@ -5,6 +5,7 @@ import { body } from './planning';
 import { nowIso } from '../lib/time';
 import { safeJson, splitTags } from '../lib/papers';
 import { readingState } from '../lib/reading';
+import { attachmentCleanup, listAttachments } from './attachments';
 
 const IDEA_STATUSES = ['seed', 'exploring', 'drafting', 'experimenting', 'mature', 'shelved', 'dropped'];
 
@@ -52,17 +53,18 @@ export function registerIdeas(app: App) {
       FROM idea_papers ip JOIN papers p ON p.id = ip.paper_id WHERE ip.idea_id = ? ORDER BY ip.created_at`, id);
     const ids = papers.map((p: any) => p.id);
     const plans = ids.length ? await all(ctx.db, `SELECT * FROM reading_plans WHERE paper_id IN (${ids.map(() => '?').join(',')})`, ...ids) : [];
-    const [versions, notes, minutes] = await Promise.all([
+    const [versions, notes, minutes, attachments] = await Promise.all([
       all(ctx.db, "SELECT id, label, title, LENGTH(content) AS length, created_at FROM doc_versions WHERE entity = 'idea' AND entity_id = ? ORDER BY id DESC", id),
       all(ctx.db, 'SELECT * FROM notes WHERE idea_id = ? ORDER BY id', id),
       first(ctx.db, `SELECT ROUND(COALESCE(SUM((julianday(COALESCE(end_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))) - julianday(start_at)) * 1440), 0)) AS m FROM sessions WHERE idea_id = ?`, id),
+      listAttachments(ctx, 'idea', id),
     ]);
     const withState = papers.map((p: any) => ({ ...p, reading: forIdea(plans.filter((x: any) => x.paper_id === p.id), id) }));
     return json(c, {
       idea: { ...idea, tags: safeJson(idea.tags, []) },
       papers: withState,
       satisfied: withState.filter((p) => p.reading.state === 'satisfied').length,
-      versions, notes, minutes: minutes?.m || 0,
+      versions, notes, minutes: minutes?.m || 0, attachments,
     });
   });
 
@@ -107,8 +109,12 @@ export function registerIdeas(app: App) {
   app.delete('/ideas/:id', async (c) => {
     const ctx = c.get('ctx');
     const id = idParam(c.req.param('id'));
-    if (ctx.actor !== 'web' && c.req.query('confirm') !== '1') throw conflict('删除 Idea 需要确认', { needs_confirm: true });
+    if (ctx.actor !== 'web' && c.req.query('confirm') !== '1') {
+      const n = (await first(ctx.db, "SELECT COUNT(*) AS n FROM attachments WHERE owner_type = 'idea' AND owner_id = ?", id))?.n || 0;
+      throw conflict('删除 Idea 需要确认', { needs_confirm: true, preview: { delete_idea: id, attachments: n } });
+    }
     await remove(ctx, 'ideas', id, [
+      ...attachmentCleanup(ctx, 'idea', id),
       stmt(ctx.db, 'DELETE FROM idea_papers WHERE idea_id = ?', id),
       stmt(ctx.db, 'UPDATE reading_plans SET idea_id = NULL WHERE idea_id = ?', id),
       stmt(ctx.db, 'UPDATE tasks SET idea_id = NULL WHERE idea_id = ?', id),

@@ -11,8 +11,11 @@
 //   - 低风险操作直接完成：加入候选区、随手记、任务、计时、新建 Idea / 计划 / 笔记
 //   - 覆盖个人内容、撤销导入：先返回预览，需要 confirm: true 再执行
 //   - 标记「不发送给外部模型」的 Idea 和笔记，不把正文返回给模型
+//   - 附件：attach_file 读取本机文件上传；只返回文件名和下载链接，不把附件内容返回给模型
 import { createHash } from 'node:crypto';
 import { createInterface } from 'node:readline';
+import { readFile, stat } from 'node:fs/promises';
+import { basename } from 'node:path';
 
 const BASE = (process.env.HONEY_URL || 'http://127.0.0.1:8788').replace(/\/+$/, '');
 const HEADERS = {
@@ -54,6 +57,9 @@ const today = () => api('GET', '/bootstrap').then((b) => b.today);
 const j = (v) => JSON.stringify(v, null, 1);
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] != null && o[k] !== '').map((k) => [k, o[k]]));
 const needsConfirm = (e) => e instanceof ApiError && e.status === 409 && e.data?.needs_confirm;
+const fileSize = (n) => (n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
+const attachmentInfo = (a) => ({ id: a.id, filename: a.filename, size: fileSize(a.size), download: `${BASE}/api/attachments/${a.id}/download` });
+const OWNER = { type: 'string', enum: ['idea', 'paper', 'note'], description: '挂在哪类记录下：idea（Idea / Proposal）、paper（论文）、note（笔记）' };
 const confirmText = (e) => `⚠️ ${e.message}\n变更预览：\n${j(e.data.preview)}\n请把预览告诉用户，得到明确同意后再用 confirm: true 调用一次。`;
 
 // ───────── 工具 ─────────
@@ -81,6 +87,7 @@ const TOOLS = [
         recommendations: d.recommendations.map((r) => pick(r, ['kind', 'recommender', 'reason', 'source_name', 'created_at'])),
         notes: d.notes.map((n) => (n.no_llm ? { id: n.id, title: n.title, content: '（设置为不发送给外部模型）' } : { id: n.id, title: n.title, content: n.content })),
         ideas: d.ideas.map((i) => pick(i, ['id', 'title', 'relation'])),
+        attachments: (d.attachments || []).map(attachmentInfo),
       });
     },
   },
@@ -341,6 +348,7 @@ const TOOLS = [
         ...(i.no_llm ? { content: '（这个 Idea 设置为不发送给外部模型；用户可以在网页上关闭这个开关）' } : { one_liner: i.one_liner, content: i.content }),
         papers: d.papers.map((p) => ({ id: p.id, title: p.title, relation: p.relation, reading_for_this_idea: p.reading.state })),
         summary: `关联 ${d.papers.length} 篇；其中 ${d.satisfied} 篇已完成本 Idea 所需的阅读目标`,
+        attachments: i.no_llm ? `${(d.attachments || []).length} 个` : (d.attachments || []).map(attachmentInfo),
       });
     },
   },
@@ -359,6 +367,45 @@ const TOOLS = [
     run: async ({ idea_id, ...b }) => {
       await api('POST', `/ideas/${idea_id}/papers`, b);
       return '已关联';
+    },
+  },
+  {
+    name: 'list_attachments', description: '列出某个 Idea / 论文 / 笔记下的附件（文件名、大小、下载链接）。不返回文件内容。',
+    inputSchema: S({ owner_type: OWNER, owner_id: int('记录编号') }, ['owner_type', 'owner_id']), annotations: { readOnlyHint: true },
+    run: async ({ owner_type, owner_id }) => {
+      const r = await api('GET', `/attachments?owner_type=${owner_type}&owner_id=${owner_id}`);
+      return r.attachments.length ? j(r.attachments.map(attachmentInfo)) : '还没有附件';
+    },
+  },
+  {
+    name: 'attach_file',
+    description: '把本机的一个文件（Excel、PDF、Word、图片等，最大 10 MB）作为附件挂到 Idea / 论文 / 笔记下。path 是这台电脑上的文件路径。'
+      + '同名且内容相同的文件重复上传只保存一次。返回下载链接，可以写进正文，例如 [文件名](下载链接)。',
+    inputSchema: S({ owner_type: OWNER, owner_id: int('记录编号'), path: str('本机文件的完整路径'), filename: str('保存的文件名（默认用原文件名）'), note: str('备注') }, ['owner_type', 'owner_id', 'path']),
+    run: async ({ owner_type, owner_id, path, filename, note }) => {
+      let info;
+      try {
+        info = await stat(path);
+      } catch {
+        return `找不到文件：${path}`;
+      }
+      if (!info.isFile()) return `这不是一个文件：${path}`;
+      if (info.size > 10 * 1024 * 1024) return `文件 ${fileSize(info.size)}，超过单个附件上限 10 MB`;
+      const data = await readFile(path);
+      const name = filename || basename(path);
+      const r = await api('POST', '/attachments', { owner_type, owner_id, filename: name, note, data_base64: data.toString('base64') },
+        { 'Idempotency-Key': 'att-' + createHash('sha256').update(data).update(`${owner_type}:${owner_id}:${name}`).digest('hex').slice(0, 32) });
+      return `${r.duplicate || r.replayed ? '这个文件之前已经上传过' : '已上传附件'} #${r.id}「${r.filename}」（${fileSize(r.size)}）\n下载链接：${BASE}/api/attachments/${r.id}/download`;
+    },
+  },
+  {
+    name: 'delete_attachment',
+    description: '删除一个附件（删除后无法恢复）。第一次调用（不带 confirm）只返回预览：把预览告诉用户，用户明确同意后再带 confirm: true 调用一次。',
+    inputSchema: S({ id: int('附件编号'), confirm: bool('用户已看过预览并同意删除') }, ['id']),
+    annotations: { destructiveHint: true },
+    run: async ({ id, confirm }) => {
+      const r = await api('DELETE', `/attachments/${id}${confirm ? '?confirm=1' : ''}`);
+      return `已删除附件 #${id}「${r.deleted.filename}」（${r.deleted.size}，原来挂在 ${r.deleted.owner}）`;
     },
   },
   {
@@ -406,7 +453,7 @@ const TOOLS = [
 // ───────── MCP（JSON-RPC over stdio）─────────
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const INSTRUCTIONS = '这是用户的个人科研工作台「研究工作台」。加论文前先 search；推荐的论文默认进候选区，用户明确要读时才进正式清单。'
-  + '覆盖个人内容、撤销导入、删除论文时先把预览告诉用户，得到同意再带 confirm。不要编造链接、arXiv 号或作者。';
+  + '覆盖个人内容、撤销导入、删除论文或附件时先把预览告诉用户，得到同意再带 confirm。用户给出本机文件时可以用 attach_file 挂成附件。不要编造链接、arXiv 号或作者。';
 
 function send(msg) {
   process.stdout.write(JSON.stringify(msg) + '\n');

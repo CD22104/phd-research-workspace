@@ -8,6 +8,7 @@ import { confirm, fail, toast } from '../lib/ui';
 import { download, fmtDateTime } from '../lib/format';
 import Md from '../components/Md.vue';
 import MdEditor from '../components/MdEditor.vue';
+import Attachments from '../components/Attachments.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -160,11 +161,15 @@ onBeforeUnmount(() => { loadNumber++; window.removeEventListener('beforeunload',
         <Md :src="form.content" />
         <p v-if="!form.content" class="muted">这篇笔记还没有正文，点击顶部「编辑笔记」开始写。</p>
       </article>
+      <section v-if="!isNew" class="note-attachments">
+        <Attachments owner-type="note" :owner-id="note.id" />
+      </section>
     </template>
   </div>
 </template>
 
 <style scoped>
+.note-attachments { margin: 28px 0 40px; padding-top: 16px; border-top: 1px solid var(--line); }
 .note-page { max-width: 1440px; padding-top: 0; }
 .note-toolbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-height: 76px; padding: 12px 0; background: var(--surface-warm); border-bottom: 1px solid var(--line); }
 .save-status { flex: 1; min-width: 110px; }

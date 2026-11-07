@@ -17,7 +17,7 @@ export function registerConferences(app:App) {
   if(!Number.isInteger(b.base_version)||b.base_version<0)throw bad('缺少有效版本号');
   if((current?.version??0)!==b.base_version)throw conflict('投稿目标已在其他页面更新，请刷新后重试');
   if(ctx.actor!=='web'&&current&&b.confirm!==true)throw conflict('修改已有投稿目标需要确认',{needs_confirm:true});
-  if(!['followed','pinned','planned','project_id','milestone_id'].some(k=>k in b))throw bad('没有可更新的投稿目标字段');
+  if(!['followed','pinned','planned','project_id','milestone_id','milestone_ids'].some(k=>k in b))throw bad('没有可更新的投稿目标字段');
   for(const k of ['followed','pinned','planned'])if(k in b && typeof b[k]!=='boolean')throw bad('关注、置顶和投稿计划只能是 true / false');
   const project='project_id'in b?b.project_id:current?.project_id??null;
   if(project!==null&&(!Number.isInteger(project)||project<1||!await first(ctx.db,'SELECT id FROM projects WHERE id=?',project)))throw bad('关联项目不存在');
@@ -26,6 +26,13 @@ export function registerConferences(app:App) {
    const milestone=catalog.milestones.find(m=>m.id===b.milestone_id);
    if(!milestone?.action||typeof b.done!=='boolean')throw bad('节点或完成状态不正确');
    if(b.done)completed[b.milestone_id]=completed[b.milestone_id]||nowIso();else delete completed[b.milestone_id];
+  }
+  // 「完成投稿」：一次勾选 / 撤销同一轮的注册与正文提交，只记一次版本
+  if('milestone_ids'in b){
+   const ids=b.milestone_ids;
+   if(!Array.isArray(ids)||!ids.length||ids.length>10||typeof b.done!=='boolean'||!ids.every(id=>catalog.milestones.some(m=>m.id===id&&m.action)))throw bad('节点或完成状态不正确');
+   const ts=nowIso();
+   for(const id of ids)if(b.done)completed[id]=completed[id]||ts;else delete completed[id];
   }
   const ts=nowIso();
   const result=await run(ctx.db,`INSERT INTO conference_targets(conference_key,followed,pinned,planned,project_id,completed,version,created_at,updated_at) VALUES(?,?,?,?,?,?,1,?,?)

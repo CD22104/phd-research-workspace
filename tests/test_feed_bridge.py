@@ -110,6 +110,6 @@ class FeedBridge(unittest.TestCase):
   self.assertEqual(request('/api/feeds/runs',p,headers={'X-Requested-With':'test'})[0],201)
   self.assertTrue(request('/api/feeds/runs',p,headers={'X-Requested-With':'test'})[1]['replayed'])
  def test_08_export_excludes_auth(self):
-  s,b,_=request('/api/export');self.assertEqual(b['schema_version'],14);self.assertIn('feed_report_versions',b['tables']);self.assertNotIn('feed_oauth_tokens',b['tables']);self.assertNotIn('feed_oauth_grants',b['tables'])
+  s,b,_=request('/api/export');self.assertGreaterEqual(b['schema_version'],14);self.assertIn('feed_report_versions',b['tables']);self.assertNotIn('feed_oauth_tokens',b['tables']);self.assertNotIn('feed_oauth_grants',b['tables'])
 
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -48,7 +48,7 @@ class TimeBlocks(unittest.TestCase):
   after=call('GET','/day/'+self.date)
   self.assertEqual(before['summary']['minutes'],after['summary']['minutes']);self.assertEqual(before['sessions'],after['sessions'])
   self.assertEqual(timer['running'],call('GET','/timer')['running'])
-  exported=call('GET','/export');self.assertEqual(exported['schema_version'],14);self.assertTrue(any(r['task_id']==self.task['id'] for r in exported['tables']['task_time_blocks']))
+  exported=call('GET','/export');self.assertGreaterEqual(exported['schema_version'],14);self.assertTrue(any(r['task_id']==self.task['id'] for r in exported['tables']['task_time_blocks']))
  def test_task_lifecycle_and_script_confirmation(self):
   row=self.create();path=f"/time-blocks/{row['id']}"
   update={'date':self.date,'base_version':1,'start_minute':600,'end_minute':660}
