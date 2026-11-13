@@ -69,7 +69,10 @@ try{
  await p.getByRole('button',{name:'刷新投稿倒计时',exact:true}).click();await visible(p,'acl-2027');
  assert.match(await target(p,'acl-2027').innerText(),/日期待公布/);assert.equal(await target(p,'acl-2027').locator('.countdown-node').count(),0);
  assert.match(await target(p,'iclr-2027').innerText(),/新投稿已截止/);assert.equal(await target(p,'iclr-2027').locator('.countdown-node').count(),0);
- assert.equal(await target(p,'cvpr-2027').locator('.countdown-node').count(),2);
+ // 置顶会议最多显示两个节点；离截止只剩一个时显示一个
+ const {upcomingDeadlines}=await import('../web/src/lib/deadlines.js');
+ const cvprNodes=Math.min(2,upcomingDeadlines((await conferences()).filter(x=>x.key==='cvpr-2027'),Date.now()).length);assert(cvprNodes>0,'CVPR 2027 已没有未截止的节点，请换一个会议');
+ assert.equal(await target(p,'cvpr-2027').locator('.countdown-node').count(),cvprNodes);
  const keys=await p.locator('.countdown-target').evaluateAll(els=>els.map(x=>x.dataset.testid));
  assert.deepEqual(keys,['countdown-target-cvpr-2027','countdown-target-ijcai-2027','countdown-target-iclr-2027','countdown-target-acl-2027']);
  report.push('all planned targets have named entries: pinned first, nearest future next, past and undated statuses visible without fabricated countdowns');
@@ -78,7 +81,7 @@ try{
   for(const path of ['/','/week','/calendar']){
    await p.goto(origin+path);await visible(p,'ijcai-2027');await visible(p,'acl-2027');
    assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth),width,path+' overflow');
-   if(path!=='/'){const a=await p.getByTestId('submission-countdown').boundingBox(),b=await p.locator(path==='/week'?'.week-layout':'.calendar-intro').boundingBox();assert(b.y-a.y-a.height>=24);}
+   if(path!=='/'){const a=await p.getByTestId('submission-countdown').boundingBox(),b=await p.locator(path==='/week'?'.board-layout':'.calendar-intro').boundingBox();assert(b.y-a.y-a.height>=24);}
    await p.screenshot({path:out+'/'+width+'-'+(path==='/'?'today':path.slice(1))+'.png',fullPage:path==='/'});
   }
  }

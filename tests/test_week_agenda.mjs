@@ -30,19 +30,21 @@ try {
  const p=await c.newPage(), errors=[], mutations=[];
  p.on('pageerror',e=>errors.push(e.message));
  p.on('request',r=>{if(!['GET','HEAD'].includes(r.method()))mutations.push(r.url());});
- const day=date=>p.getByTestId('day-drop-'+date), agenda=date=>day(date).getByTestId('planning-agenda-'+date);
- const settled=async loc=>{await loc.waitFor();await p.waitForFunction(el=>el.getAttribute('aria-busy')==='false',await loc.elementHandle());};
+ // 排期板：每天一行（日期格 + 早 / 中 / 晚）；日期格带 aria-busy
+ const day=date=>p.getByTestId('board-day-'+date), agenda=date=>day(date);
+ const settled=async loc=>{await loc.waitFor();const head=loc.locator('[aria-busy]').first();await p.waitForFunction(el=>el.getAttribute('aria-busy')==='false',await head.elementHandle());};
  const expectText=async (loc,text)=>{await loc.getByText(text,{exact:false}).first().waitFor();};
  await p.goto(origin+'/week?date='+monday);await settled(agenda(monday));
- const a=agenda(monday);assert.equal(await a.locator('.agenda-event').count(),5);
+ const a=agenda(monday);assert.equal(await a.locator('.board-event').count(),5);
  await expectText(a,'2 小时 45 分');await expectText(a,'另有 1 项全天安排');await expectText(a,'有时段重叠');
- assert.equal(await a.locator('.agenda-event').first().locator('.agenda-time').innerText(),'全天');
+ assert.equal(await a.locator('.board-event').first().locator('.ev-time').innerText(),'全天');
+ await expectText(p.getByTestId('board-cell-'+monday+'-morning'),'机器学习课程');await expectText(p.getByTestId('board-cell-'+monday+'-afternoon'),'午后休息');await expectText(p.getByTestId('board-cell-'+monday+'-morning'),'Lab room 1');
  await expectText(agenda('2026-10-06'),'全天休息');
  await expectText(agenda('2026-10-07'),'周组会');await expectText(agenda('2026-10-09'),'周组会');
- for(const label of ['会议 · 重复','课程','休息','打卡','其他'])await expectText(a.locator('.agenda-meta'),label);
+ for(const label of ['会议 · 重复','课程','休息','打卡','其他'])await expectText(a.locator('.ev-meta'),label);
  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth),1440);
  await p.screenshot({path:out+'/desktop-week.png',fullPage:true});
- report.push('week shows all five kinds, recurrence, locations, rest day, overlap union and separate all-day count');
+ report.push('week board shows all five kinds by period, recurrence, locations, rest day, overlap union and separate all-day count');
 
  // English Enter and an IME confirmation leave text intact and do not issue a mutation.
  const enterDoesNotSubmit=async (input,value)=>{
@@ -91,7 +93,7 @@ try {
  await a.getByTestId('agenda-event-'+meeting.id).click();
  await p.getByTestId('event-scope').waitFor();await p.getByTestId('event-title').fill('仅本次修改的组会');await p.getByTestId('event-save').click();
  await expectText(a,'仅本次修改的组会');await expectText(agenda('2026-10-07'),'周组会 '+stamp);
- await p.getByRole('button',{name:'下周 ›',exact:true}).click();await settled(agenda(next));await expectText(agenda(next),'下周的外部会议');assert.equal(await p.getByTestId('day-drop-'+monday).count(),0);
+ await p.getByRole('button',{name:'下周 ›',exact:true}).click();await settled(agenda(next));await expectText(agenda(next),'下周的外部会议');assert.equal(await p.getByTestId('board-day-'+monday).count(),0);
  await p.getByRole('button',{name:'‹ 上周',exact:true}).click();await settled(agenda(monday));
  report.push('add/edit calendar from weekly board, recurring edit affects only selected occurrence, week navigation reloads corresponding schedule');
 
@@ -99,7 +101,7 @@ try {
  const calendarPattern='**/api/calendar?*';
  await p.route(calendarPattern,route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Test outage'})}));
  await p.reload();await expectText(agenda(monday),'日程读取失败');
- assert(!(await agenda(monday).innerText()).includes('暂无日程安排'));
+ assert.equal(await agenda(monday).locator('.board-event').count(),0,'failed load must not look like an empty day');
  await p.unroute(calendarPattern);await agenda(monday).getByRole('button',{name:'重试',exact:true}).click();await expectText(agenda(monday),'机器学习课程');
  report.push('calendar failure is explicit and retry restores events');
 

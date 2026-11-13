@@ -28,11 +28,15 @@ try{
  await p.getByRole('button',{name:'展开 ACL 2027',exact:true}).click();await text(p.getByTestId('conference-acl-2027'),'官方日期待公布');
  assert.equal(await p.getByTestId('conference-acl-2027').locator('.milestone-count').count(),0);
  await p.screenshot({path:out+'/desktop-submissions.png'});
- await p.getByTestId('milestone-cvpr-2027-registration').getByRole('checkbox').click();
- await text(p.getByTestId('milestone-cvpr-2027-registration'),'已完成');
- assert.equal(await p.getByTestId('conference-summary-cvpr-2027').getByText('论文注册截止',{exact:true}).count(),0);
- await p.reload();await text(p.getByTestId('milestone-cvpr-2027-registration'),'已完成');
- await p.getByTestId('milestone-cvpr-2027-registration').getByRole('checkbox').click();await text(p.getByTestId('conference-summary-cvpr-2027'),'论文注册截止');
+ // 勾选 / 取消 CVPR 下一个还没截止的节点（写死某个节点会随日期过期）
+ const cvprNow=(await api('GET','/conferences')).conferences.find(x=>x.key==='cvpr-2027');
+ const next=cvprNow.milestones.find(m=>m.action&&m.at&&!m.requires&&Date.parse(m.at)>Date.now());assert(next,'CVPR 2027 已没有未截止的节点，请换一个会议');
+ const row=p.getByTestId('milestone-cvpr-2027-'+next.id);
+ await row.getByRole('checkbox').click();
+ await text(row,'已完成');
+ assert.equal(await p.getByTestId('conference-summary-cvpr-2027').getByText(next.label,{exact:true}).count(),0);
+ await p.reload();await text(row,'已完成');
+ await row.getByRole('checkbox').click();await text(p.getByTestId('conference-summary-cvpr-2027'),next.label);
  await p.locator('.submission-toolbar .n-select').click();await p.locator('.n-base-select-option').filter({hasText:/^安全$/}).click();
  assert.equal(await p.locator('.conference-card').count(),4);
  report.push('22 conference cards, pending dates, area filters and persisted completion; Singapore dates independent of browser timezone');
@@ -41,7 +45,7 @@ try{
   await p.goto(origin+path);await text(p.getByTestId('submission-countdown'),'CVPR 2027');
   if(path.startsWith('/calendar')){await text(p.getByTestId('conference-day-2026-11-11'),'19:59');await text(p.getByTestId('conference-day-2026-11-11'),'CVPR 2027');}
  }
- await p.goto(origin+'/week?date=2026-11-17');await text(p.getByTestId('day-drop-2026-11-17').getByTestId('conference-day-2026-11-17'),'正文提交截止');
+ await p.goto(origin+'/week?date=2026-11-17');await text(p.getByTestId('board-day-2026-11-17').getByTestId('conference-day-2026-11-17'),'正文提交截止');
  report.push('countdown on Today/Week/Calendar, deadline markers on actual local date in weekly day plans');
 
  await p.goto(origin+'/projects');const card=p.getByTestId('project-card-'+project.id);await card.waitFor();await card.getByRole('button',{name:'展开 '+project.name,exact:true}).click();
@@ -63,7 +67,7 @@ try{
  report.push('creating daily task with weekly goal immediately creates exactly one visible reusable weekly child');
 
  await p.setViewportSize({width:390,height:844});
- for(const [name,path,wait]of [['projects','/projects','.project-card'],['submissions','/submissions','.conference-card'],['week','/week?date=2026-11-17','.day.card']]){
+ for(const [name,path,wait]of [['projects','/projects','.project-card'],['submissions','/submissions','.conference-card'],['week','/week?date=2026-11-17','[data-testid^=board-day-]']]){
   await p.goto(origin+path);await p.locator(wait).first().waitFor();assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth),390,name+' mobile overflow');await p.screenshot({path:out+'/mobile-'+name+'.png'});
  }
  assert.deepEqual(errors,[]);report.push('390px layouts fit with no JavaScript errors');await c.close();

@@ -10,13 +10,13 @@ import { STATUS,addDays,fmtDate,fmtMin,isoWeek,weekStart } from '../lib/format';
 import ScoreCard from '../components/ScoreCard.vue';
 import ItemPicker from '../components/ItemPicker.vue';
 import GoalTaskList from '../components/GoalTaskList.vue';
-import TaskRow from '../components/TaskRow.vue';
 import TaskEditModal from '../components/TaskEditModal.vue';
-import PlanningDayAgenda from '../components/PlanningDayAgenda.vue';
+import WeekBoardDay from '../components/WeekBoardDay.vue';
+import { PERIODS, PERIOD_LABEL, currentPeriod } from '../lib/periods';
 import ScheduleEventEditor from '../components/ScheduleEventEditor.vue';
 const route=useRoute();
 const monday=ref(weekStart(/^\d{4}-\d{2}-\d{2}$/.test(route.query.date || '')?route.query.date:store.today));
-const w=ref(null),loading=ref(false),error=ref(''),editGoal=ref(null),editingTask=ref(null),dragOver=ref('');
+const w=ref(null),loading=ref(false),error=ref(''),editGoal=ref(null),editingTask=ref(null);
 const busy=reactive({});
 const calendar=ref(null), calendarLoading=ref(false), calendarError=ref('');
 const eventOpen=ref(false), selectedEvent=ref(null), eventDate=ref(store.today);
@@ -47,9 +47,16 @@ async function patchGoal(g,b){return run(`goal-${g.id}`,async()=>{await api.patc
 async function delGoal(g){await run(`goal-${g.id}`,async()=>{await api.del(`/goals/${g.id}`);changed();});}
 async function carryGoals(){await run('carry',async()=>{const r=await api.post('/goals/carry',{to_week:monday.value});toast(r.created.length?`已带入 ${r.created.length} 个未完成计划`:'上周没有未完成计划');changed();});}
 async function saveEdit(){const g=editGoal.value;if(!g?.title.trim())return;const ok=await patchGoal(g,{title:g.title.trim(),criteria:g.criteria,weight:g.weight,project_id:g.project_id,due_date:g.due_date||null,note:g.note});if(ok)editGoal.value=null;}
-function readDrag(e){const raw=e.dataTransfer.getData('application/x-honey-goal-task');if(raw)return Number(raw);try{return Number(JSON.parse(e.dataTransfer.getData('text/plain')).goal_task_id);}catch{return null;}}
-async function scheduleDrop(e,date){e.preventDefault();dragOver.value='';const id=readDrag(e);if(!Number.isInteger(id)||id<1)return;await run(`schedule-${id}-${date}`,async()=>{await api.post(`/goal-tasks/${id}/schedule`,{date,planned:true});toast(`已安排到 ${fmtDate(date)}`);changed();});}
-function acceptDrag(e,date){if([...e.dataTransfer.types].includes('application/x-honey-goal-task')){e.preventDefault();e.dataTransfer.dropEffect='copy';dragOver.value=date;}}
+const where=(date,period)=>`${fmtDate(date)} · ${period?PERIOD_LABEL[period]:'未定时段'}`;
+// 排期板放下：周子任务 → 安排到这一天这一段；日任务 → 换天 / 换时段
+async function place({kind,id,date,period}){
+  if(kind==='goal-task')return run(`schedule-${id}-${date}`,async()=>{await api.post(`/goal-tasks/${id}/schedule`,{date,period,planned:true});toast(`已安排到 ${where(date,period)}`);changed();});
+  const t=(w.value?.tasks||[]).find(x=>x.id===id);
+  if(t && t.date===date && (t.period||null)===period)return;
+  return run(`task-${id}`,async()=>{await api.post(`/tasks/${id}/move`,{date,period});toast(`已移到 ${where(date,period)}`);changed();});
+}
+async function setPeriod(t,period){await place({kind:'task',id:t.id,date:t.date,period});}
+const poolPeriod=computed(()=>isThisWeek.value?currentPeriod(store.timezone):'morning');
 async function toggleTask(t){await run(`task-${t.id}`,async()=>{await api.patch(`/tasks/${t.id}`,{status:t.status==='done'?'todo':'done'});changed();});}
 async function carryTask(t){await run(`task-${t.id}`,async()=>{if(t.goal_task_id)await api.post(`/goal-tasks/${t.goal_task_id}/schedule`,{date:addDays(t.date,1),planned:true});else await api.post('/tasks/carry',{ids:[t.id],to:addDays(t.date,1)});toast('已安排到下一天');changed();});}
 async function dropTask(t){await run(`task-${t.id}`,async()=>{await api.patch(`/tasks/${t.id}`,{status:t.status==='dropped'?'todo':'dropped'});changed();});}
@@ -61,36 +68,31 @@ async function removeTask(t){if(!(await confirm('删除日任务？',`「${t.tit
     <div v-if="error" class="card row"><span>{{ error }}</span><NButton size="small" @click="load">重试</NButton></div>
     <template v-if="w">
       <SubmissionCountdown compact />
-      <div class="week-layout">
-        <section class="goal-column">
-          <div class="card">
+      <div class="board-layout">
+        <aside class="pool-column" data-testid="task-pool">
+          <div class="card pool-card">
             <div class="card-title"><h3>本周大计划</h3><NButton size="tiny" quaternary :loading="busy.carry" @click="carryGoals">带入上周</NButton></div>
             <NInput v-model:value="form.focus" size="small" placeholder="本周主题（可选）" @blur="saveWeek(['focus'])" />
-            <p class="small muted">在每个计划下列小任务，拖到右侧某一天；也可以点「安排」选择日期。</p>
+            <p class="small muted pool-hint">把小任务拖到右边某一天的上午 / 下午 / 晚上；也可以点「安排」。</p>
             <p v-if="!w.goals.length" class="muted small">先写下一件这周想推进的大事。</p>
-            <article v-for="g in w.goals" :key="g.id" class="weekly-goal" :class="{dropped:g.status==='dropped'}">
-              <div class="row"><h3 class="grow goal-name">{{ g.title }}</h3><NButton size="tiny" quaternary :disabled="busy[`goal-${g.id}`]" @click="editGoal={...g}">编辑</NButton></div>
-              <div v-if="g.criteria" class="small muted criteria">{{ g.criteria }}</div>
-              <div class="progress-row"><NProgress type="line" :percentage="progress(g)" :height="6" :show-indicator="false"/><span class="small muted">{{ childTasks(g).length ? `${childTasks(g).filter(t=>t.status==='done').length}/${childTasks(g).length}` : `${progress(g)}%` }}</span></div>
-              <div v-if="g.project_name || g.due_date" class="small muted">{{ g.project_name }}<span v-if="g.due_date"> · 截止 {{ fmtDate(g.due_date,false) }}</span></div>
-              <GoalTaskList :goal="g" :tasks="w.goal_tasks || []" :date="isThisWeek?store.today:monday" />
+            <article v-for="g in w.goals" :key="g.id" class="weekly-goal" :class="{dropped:g.status==='dropped'}" :data-testid="`pool-goal-${g.id}`">
+              <div class="goal-head"><h3 class="goal-name">{{ g.title }}</h3><span class="small muted goal-count">{{ childTasks(g).length ? `${childTasks(g).filter(t=>t.status==='done').length}/${childTasks(g).length}` : `${progress(g)}%` }}</span><NButton size="tiny" quaternary :disabled="busy[`goal-${g.id}`]" @click="editGoal={...g}">编辑</NButton></div>
+              <div class="goal-bar" aria-hidden="true"><span :style="{width:progress(g)+'%'}" /></div>
+              <div v-if="g.criteria || g.project_name || g.due_date" class="small muted criteria">{{ [g.criteria, g.project_name, g.due_date ? '截止 ' + fmtDate(g.due_date,false) : ''].filter(Boolean).join(' · ') }}</div>
+              <GoalTaskList :goal="g" :tasks="w.goal_tasks || []" :date="isThisWeek?store.today:monday" :default-period="poolPeriod" compact />
               <details v-if="!childTasks(g).length" class="manual-progress"><summary class="small muted">手动记录进度</summary><NSlider v-model:value="g.progress" :step="10" :disabled="busy[`goal-${g.id}`]" @dragend="patchGoal(g,{progress:g.progress})"/><NButton size="tiny" secondary @click="patchGoal(g,{status:g.status==='done'?'open':'done'})">{{ g.status==='done'?'重新打开':'标为完成' }}</NButton></details>
             </article>
-            <div class="new-goal"><NInput v-model:value="newGoal.title" placeholder="＋ 新的大计划" :disabled="busy.add"/><div class="row" style="margin-top:8px"><NInput v-model:value="newGoal.criteria" size="small" placeholder="完成标准（可选）" class="grow"/><NButton type="primary" size="small" :loading="busy.add" :disabled="!newGoal.title.trim()" @click="addGoal">添加计划</NButton></div></div>
+            <div class="new-goal"><NInput v-model:value="newGoal.title" size="small" placeholder="＋ 新的大计划" :disabled="busy.add"/><div class="row" style="margin-top:8px"><NInput v-model:value="newGoal.criteria" size="small" placeholder="完成标准（可选）" class="grow"/><NButton type="primary" size="small" :loading="busy.add" :disabled="!newGoal.title.trim()" @click="addGoal">添加计划</NButton></div></div>
+          </div>
+        </aside>
+        <section class="board-column">
+          <div class="board-heading"><div><h3>七天安排</h3><span class="small muted">课程和会议按开始时间放进上午 / 下午 / 晚上；任务可以在格子之间拖动，换天或换时段。</span></div><span class="small muted">{{ isoWeek(monday) }}</span></div>
+          <div class="plan-board card" data-testid="plan-board">
+            <div class="board-head-row" aria-hidden="true"><span></span><span v-for="p in PERIODS" :key="p.key"><b>{{ p.label }}</b><small>{{ p.range }}</small></span></div>
+            <WeekBoardDay v-for="dd in w.days" :key="dd.date" :date="dd.date" :kind="dd.kind" :today="dd.date===store.today" :events="eventsOn(dd.date)" :tasks="dayTasks(dd.date)" :minutes="dd.minutes" :loading="calendarLoading" :error="calendarError" :busy="busy"
+              @place="place" @toggle="toggleTask" @edit="editingTask=$event" @period="setPeriod" @carry="carryTask" @drop="dropTask" @remove="removeTask" @add-event="openEvent(dd.date)" @edit-event="ev=>openEvent(dd.date,ev)" @retry="loadCalendar" />
           </div>
           <details class="card secondary-section"><summary>本周执行与工时</summary><ScoreCard :score="w.score" title="本周执行" :due-by-today="w.score.dueByToday"/><p class="small">已记录 {{ fmtMin(w.minutes) }} · 本周计划 {{ fmtMin(w.targetMinutes) }}</p><NInputNumber v-model:value="form.target_hours" :min="0" placeholder="计划小时数" @blur="saveWeek(['target_hours'])"><template #suffix>小时</template></NInputNumber></details>
-        </section>
-        <section class="days-column">
-          <div class="board-heading"><div><h3>七天日计划</h3><span class="small muted">先看当天日程，再安排任务；未完成的小任务可以安排到多天。</span></div><span class="small muted">{{ isoWeek(monday) }}</span></div>
-          <p class="agenda-hint small muted">日程占用时长已合并重叠时段，全天安排单列。未固定上下班时间，可结合这些安排判断当天余量。</p>
-          <div class="days">
-            <article v-for="dd in w.days" :key="dd.date" :data-testid="`day-drop-${dd.date}`" class="day card" :class="{today:dd.date===store.today,over:dragOver===dd.date}" @dragover="e=>acceptDrag(e,dd.date)" @dragleave.self="dragOver=''" @drop="e=>scheduleDrop(e,dd.date)">
-              <div class="day-head"><RouterLink :to="{name:'today',query:{date:dd.date}}" class="day-title">{{ fmtDate(dd.date) }}<span v-if="dd.date===store.today" class="pill">今天</span></RouterLink><span class="small muted">{{ STATUS.dayKind[dd.kind] }}{{ dd.checkin?' · 已确认':'' }}</span></div>
-              <PlanningDayAgenda :date="dd.date" :events="eventsOn(dd.date)" :kind="dd.kind" :loading="calendarLoading" :error="calendarError" interactive @retry="loadCalendar" @add="openEvent(dd.date)" @edit="event=>openEvent(dd.date,event)" />
-              <div class="day-tasks"><TaskRow v-for="t in dayTasks(dd.date)" :key="t.id" :task="t" :busy="busy[`task-${t.id}`]" @toggle="toggleTask" @edit="editingTask=$event" @carry="carryTask" @drop="dropTask" @remove="removeTask"/><div v-if="!dayTasks(dd.date).length" class="day-empty">把左侧小任务拖到这里</div></div>
-              <div class="day-foot"><RouterLink :to="{name:'today',query:{date:dd.date}}" class="small">＋ 添加日任务 / 阅读</RouterLink><span class="small muted">{{ fmtMin(dd.minutes) }}</span></div>
-            </article>
-          </div>
           <details class="card secondary-section"><summary>周复盘</summary><div class="review"><label>得到的结论</label><NInput v-model:value="form.conclusions" type="textarea" :autosize="{minRows:2}"/><label>排除的路线</label><NInput v-model:value="form.ruled_out" type="textarea" :autosize="{minRows:2}"/><label>仍未解决</label><NInput v-model:value="form.open_questions" type="textarea" :autosize="{minRows:2}"/><label>其他</label><NInput v-model:value="form.review" type="textarea" :autosize="{minRows:2}"/></div><NButton size="small" type="primary" :loading="busy.week" @click="saveWeek(['review','conclusions','ruled_out','open_questions'])">保存复盘</NButton></details>
         </section>
       </div>
@@ -101,5 +103,20 @@ async function removeTask(t){if(!(await confirm('删除日任务？',`「${t.tit
   </div>
 </template>
 <style scoped>
-.agenda-hint{margin:0 0 14px;line-height:1.65}.week-layout{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(0,1.5fr);gap:20px;align-items:start}.goal-column,.days-column{min-width:0}.goal-column>.card:first-child{margin-top:0}.weekly-goal{padding:18px 0;border-bottom:1px solid var(--line-soft)}.weekly-goal.dropped{opacity:.6}.goal-name{font-size:15px;line-height:1.5;margin:0;overflow-wrap:anywhere}.criteria{margin-top:5px}.progress-row{display:flex;gap:10px;align-items:center;margin:9px 0}.progress-row>:first-child{flex:1}.progress-row>span{white-space:nowrap}.manual-progress{margin-top:10px}.new-goal{margin-top:18px}.board-heading{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:12px}.board-heading h3{margin:0 0 5px}.days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.day.card{min-width:0;margin:0;padding:18px;min-height:150px}.day.today{border-color:var(--today-line);background:var(--today-bg)}.day.over{background:var(--honey-mist);box-shadow:0 0 0 2px var(--honey)}.day-head,.day-foot{display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap}.day-title{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--ink)}.day-empty{padding:24px 4px;color:var(--ink-3);font-size:12px;text-align:center;background:var(--surface-warm);border-radius:9px;margin:12px 0}.day-foot{padding-top:10px;margin-top:8px;border-top:1px solid var(--line-soft)}.secondary-section summary{cursor:pointer;font-size:14px;font-weight:500}.secondary-section[open] summary{margin-bottom:14px}.review{display:grid;grid-template-columns:90px minmax(0,1fr);gap:10px;margin:10px 0}.review label{font-size:13px;color:var(--ink-2);padding-top:5px}.review input{min-width:0;border:1px solid var(--line);border-radius:7px;padding:7px;font:inherit;background:white;color:var(--ink)}@media(min-width:1600px){.days{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:1000px){.week-layout{grid-template-columns:minmax(270px,.85fr) minmax(0,1fr)}.days{grid-template-columns:minmax(0,1fr)}}@media(max-width:760px){.week-layout{grid-template-columns:minmax(0,1fr)}.board-heading{flex-wrap:wrap}.review{grid-template-columns:1fr}.days{grid-template-columns:minmax(0,1fr)}}
+.board-layout{display:grid;grid-template-columns:minmax(250px,300px) minmax(0,1fr);gap:18px;align-items:start}
+.pool-column{position:sticky;top:12px;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;min-width:0;border-radius:14px}
+.pool-card{margin:0;padding:18px 16px}.pool-hint{margin:8px 0 2px;line-height:1.6}
+.weekly-goal{padding:12px 0;border-bottom:1px solid var(--line-soft)}.weekly-goal:last-of-type{border-bottom:0}.weekly-goal.dropped{opacity:.6}
+.goal-head{display:flex;align-items:baseline;gap:6px}.goal-name{flex:1;min-width:0;font-size:14px;line-height:1.5;margin:0;overflow-wrap:anywhere}.goal-count{white-space:nowrap;font-variant-numeric:tabular-nums}
+.goal-bar{height:3px;border-radius:3px;background:var(--line-soft);margin:6px 0 2px;overflow:hidden}.goal-bar span{display:block;height:100%;background:var(--accent);border-radius:3px}
+.criteria{margin-top:4px;overflow-wrap:anywhere}.manual-progress{margin-top:8px}.new-goal{margin-top:14px}
+.board-column{min-width:0}
+.board-heading{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:10px}.board-heading h3{margin:0 0 4px}
+.plan-board{padding:0;overflow:hidden;--board-date-col:150px}
+.board-head-row{display:grid;grid-template-columns:var(--board-date-col) repeat(3,minmax(0,1fr));background:var(--surface-soft);font-size:12px;color:var(--ink-2)}
+.board-head-row span{padding:9px 8px}.board-head-row span+span{border-left:1px dashed var(--line-soft)}.board-head-row b{font-size:14px;color:var(--ink);margin-right:3px}.board-head-row small{color:var(--ink-3);margin-left:4px;font-size:11px}
+.secondary-section summary{cursor:pointer;font-size:14px;font-weight:500}.secondary-section[open] summary{margin-bottom:14px}.review{display:grid;grid-template-columns:90px minmax(0,1fr);gap:10px;margin:10px 0}.review label{font-size:13px;color:var(--ink-2);padding-top:5px}.review input{min-width:0;border:1px solid var(--line);border-radius:7px;padding:7px;font:inherit;background:white;color:var(--ink)}
+@media(max-width:1280px){.plan-board{--board-date-col:120px}.board-layout{grid-template-columns:minmax(230px,260px) minmax(0,1fr);gap:14px}}
+@media(max-width:900px){.board-layout{grid-template-columns:minmax(0,1fr)}.pool-column{position:static;max-height:none;overflow:visible}}
+@media(max-width:760px){.plan-board{background:transparent;border:0;box-shadow:none;overflow:visible}.board-head-row{display:none}.board-heading{flex-wrap:wrap}.review{grid-template-columns:1fr}}
 </style>

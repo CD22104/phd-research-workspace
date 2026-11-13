@@ -4,7 +4,7 @@ import { Miniflare, Log, LogLevel } from 'miniflare';
 import { readFileSync } from 'node:fs';
 import { createHash, randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
-const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || '/tmp/claude-10031/-home-dchen/0b1e7ec2-c1bf-47cc-85ae-bff20b8f0c32/scratchpad/pw/node_modules/playwright-core/index.mjs');
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base='http://127.0.0.1:8817', callback='https://chatgpt.com/connector_platform_oauth_redirect';
 const output=await build({stdin:{contents:"import {handle} from './server/feed-bridge/index.ts'; export default {fetch:handle};",resolveDir:process.cwd()},bundle:true,write:false,format:'esm',platform:'browser',target:'es2022',logLevel:'silent'});
 const mf=new Miniflare({modules:true,script:output.outputFiles[0].text,host:'127.0.0.1',port:8817,compatibilityDate:'2025-07-18',log:new Log(LogLevel.NONE),d1Databases:{DB:'consent-only'},bindings:{DEV_NO_AUTH:'1',FEED_MCP_ORIGIN:base,FEED_OAUTH_SECRET:'isolated-consent-test-secret-0123456789'}});

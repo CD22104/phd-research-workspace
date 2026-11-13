@@ -64,6 +64,8 @@ const confirmText = (e) => `⚠️ ${e.message}\n变更预览：\n${j(e.data.pre
 
 // ───────── 工具 ─────────
 const S = (props, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
+const PERIOD = { type: ['string', 'null'], enum: ['morning', 'afternoon', 'evening', null], description: '时段：morning 上午 / afternoon 下午 / evening 晚上；null 为未定时段' };
+const PERIOD_NAMES = { morning: '上午', afternoon: '下午', evening: '晚上' };
 const str = (d) => ({ type: 'string', description: d });
 const int = (d) => ({ type: 'integer', description: d });
 const bool = (d) => ({ type: 'boolean', description: d });
@@ -238,7 +240,7 @@ const TOOLS = [
       const d = await api('GET', `/day/${date || 'today'}`);
       return j({
         date: d.date, checked_in: !!d.day?.checkin_at, plan_note: d.day?.plan_note, review: d.day?.review,
-        tasks: d.tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, planned: !!t.planned, points: t.points, goal: t.goal_title, paper: t.paper_title, minutes: t.minutes })),
+        tasks: d.tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, period: PERIOD_NAMES[t.period] || '未定时段', planned: !!t.planned, points: t.points, goal: t.goal_title, paper: t.paper_title, minutes: t.minutes })),
         week_goals: d.goals.map((g) => ({ id: g.id, title: g.title, status: g.status, progress: g.progress, due: g.due_date })),
         recorded_minutes: d.summary?.minutes, target_minutes: d.summary?.targetMinutes,
         score: d.summary?.score && { score: d.summary.score.score, status: d.summary.score.status, reason: d.summary.score.reason, parts: d.summary.score.parts.map((p) => `${p.label} ${p.detail}`) },
@@ -254,8 +256,8 @@ const TOOLS = [
     },
   },
   {
-    name: 'add_task', description: '添加任务（默认今天）。可以挂到周目标、论文、阅读计划或 Idea。points 是工作量点数（1/2/3/5），完成率按点数算。',
-    inputSchema: S({ title: str('任务'), date: str('YYYY-MM-DD'), goal_id: int('周目标'), paper_id: int('论文'), plan_id: int('阅读计划'), idea_id: int('Idea'), project_id: int('项目'), points: int('1/2/3/5'), criteria: str('完成标准') }, ['title']),
+    name: 'add_task', description: '添加任务（默认今天）。可以挂到周目标、论文、阅读计划或 Idea。points 是工作量点数（1/2/3/5），完成率按点数算。period 是粗略时段：morning 上午（12 点前）/ afternoon 下午（12–18 点）/ evening 晚上（18 点后），不填为未定时段。',
+    inputSchema: S({ title: str('任务'), date: str('YYYY-MM-DD'), period: PERIOD, goal_id: int('周目标'), paper_id: int('论文'), plan_id: int('阅读计划'), idea_id: int('Idea'), project_id: int('项目'), points: int('1/2/3/5'), criteria: str('完成标准') }, ['title']),
     run: async (a) => {
       const date = a.date || (await today());
       const t = await api('POST', '/tasks', { ...a, date }, { 'Idempotency-Key': 'task-' + hash({ ...a, date }) });
@@ -263,10 +265,14 @@ const TOOLS = [
     },
   },
   {
-    name: 'update_task', description: '更新任务：完成（done）、恢复（todo）、放弃（dropped，算计划调整），或改名、改点数。',
-    inputSchema: S({ task_id: int('任务编号'), status: { type: 'string', enum: ['todo', 'done', 'dropped'] }, title: str('新名称'), points: int('点数') }, ['task_id']),
-    run: async ({ task_id, ...b }) => {
-      await api('PATCH', `/tasks/${task_id}`, b);
+    name: 'update_task', description: '更新任务：完成（done）、恢复（todo）、放弃（dropped，算计划调整），或改名、改点数；period 换上午 / 下午 / 晚上，date 换到别的日期（换日期时可同时给 period）。',
+    inputSchema: S({ task_id: int('任务编号'), status: { type: 'string', enum: ['todo', 'done', 'dropped'] }, title: str('新名称'), points: int('点数'), period: PERIOD, date: str('换到这一天 YYYY-MM-DD'), confirm: bool('用户已确认：换日期会取消原来那天排到具体几点的时段') }, ['task_id']),
+    run: async ({ task_id, date, period, confirm, ...b }) => {
+      if (Object.keys(b).length) await api('PATCH', `/tasks/${task_id}`, b);
+      if (date || period !== undefined) {
+        const t = await api('POST', `/tasks/${task_id}/move`, { ...(date ? { date } : {}), ...(period !== undefined ? { period } : {}), ...(confirm ? { confirm: true } : {}) });
+        return `已更新${t.id !== task_id ? `（原记录有计时，已在 ${t.date} 新建任务 #${t.id}）` : ''}`;
+      }
       return '已更新';
     },
   },

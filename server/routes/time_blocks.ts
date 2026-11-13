@@ -2,7 +2,7 @@ import type { App } from '../app';
 import { all, bad, conflict, first, idParam, notFound, run, stmt } from '../db';
 import { json } from '../http';
 import { isDate, nowIso } from '../lib/time';
-import { body } from './planning';
+import { body, periodOfMinute } from './planning';
 
 const SELECT = `SELECT b.*,t.date,t.title,t.status,gt.status AS goal_task_status
  FROM task_time_blocks b JOIN tasks t ON t.id=b.task_id LEFT JOIN goal_tasks gt ON gt.id=t.goal_task_id`;
@@ -39,6 +39,8 @@ export function registerTimeBlocks(app: App) {
    WHERE t.id=? AND t.date=? AND t.status='todo' AND COALESCE(gt.status,'todo')!='done'`,b.start_minute,b.end_minute,b.client_key,ts,ts,b.task_id,date);
   const saved=await first(ctx.db,`${SELECT} WHERE b.task_id=? AND b.start_minute=? AND b.end_minute=?`,b.task_id,b.start_minute,b.end_minute);
   if(!saved)throw conflict('任务日期或完成状态已改变，请刷新后重新安排');
+  // 排到具体几点，也就决定了上午 / 下午 / 晚上
+  await run(ctx.db,'UPDATE tasks SET period=? WHERE id=? AND period IS NOT ?',periodOfMinute(b.start_minute),b.task_id,periodOfMinute(b.start_minute));
   return json(c,saved,201);
  });
  app.patch('/time-blocks/:id',async c=>{
@@ -49,6 +51,7 @@ export function registerTimeBlocks(app: App) {
   const result=await run(ctx.db,`UPDATE OR IGNORE task_time_blocks SET start_minute=?,end_minute=?,version=version+1,updated_at=?
    WHERE id=? AND version=? AND EXISTS(${ACTIVE})`,b.start_minute,b.end_minute,nowIso(),id,base,date);
   if(!result.meta.changes)throw conflict('时段或任务已改变，或同一时段已存在，请刷新后重试');
+  await run(ctx.db,'UPDATE tasks SET period=? WHERE id=? AND period IS NOT ?',periodOfMinute(b.start_minute),current.task_id,periodOfMinute(b.start_minute));
   return json(c,await first(ctx.db,`${SELECT} WHERE b.id=?`,id));
  });
  app.delete('/time-blocks/:id',async c=>{

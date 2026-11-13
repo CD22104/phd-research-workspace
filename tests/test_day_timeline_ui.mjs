@@ -6,7 +6,9 @@ assert(['localhost','127.0.0.1'].includes(new URL(origin).hostname),'Only isolat
 const out='/tmp/honey-timeline-ui';mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});
 try{
- const ctx=await browser.newContext({viewport:{width:1680,height:1050}});
+ const ctx=await browser.newContext({viewport:{width:1680,height:1900}});
+ // 今日页的小时轴默认收起；这里测展开后的行为（展开状态会被记住）
+ await ctx.addInitScript(()=>{try{localStorage.setItem('honey.today.timeline.open','1');}catch{}});
  const api=async(method,path,data)=>{const r=await ctx.request.fetch(origin+'/api'+path,{method,data,headers:{'X-Requested-With':'timeline-test','X-Actor':'web'}});assert(r.ok(),`${method} ${path}: ${r.status()}`);return r.json();};
  const date='2026-10-12';
  const stamp=Date.now();

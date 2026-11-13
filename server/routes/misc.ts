@@ -428,7 +428,7 @@ export function registerMisc(app: App) {
     const omitted: string[] = [];
     if (total <= 20 * 1024 * 1024) out.attachment_chunks = await all(ctx.db, 'SELECT * FROM attachment_chunks');
     else omitted.push('attachment_chunks');
-    return json(c, { exported_at: nowIso(), schema_version: 15, tables: out, ...(omitted.length ? { omitted_tables: omitted } : {}) });
+    return json(c, { exported_at: nowIso(), schema_version: 16, tables: out, ...(omitted.length ? { omitted_tables: omitted } : {}) });
   });
 
   app.get('/health', (c) => json(c, { ok: true, defaults: Object.keys(DEFAULT_SETTINGS).length }));

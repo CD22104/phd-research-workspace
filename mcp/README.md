@@ -41,6 +41,8 @@
 | 项目与整理 | `list_projects`、`create_project`、`capture`、`save_feed_result`、`get_stats` |
 | 附件 | `list_attachments`、`attach_file`、`delete_attachment` |
 
+日任务可以带时段：`add_task` / `update_task` 的 `period` 取 `morning`（上午）/ `afternoon`（下午）/ `evening`（晚上），`null` 为未定；`update_task` 的 `date` 把任务换到别的日期，如果会取消原来那天排到具体几点的时段，需要用户确认后带 `confirm: true`。
+
 新推荐的论文默认进候选区。覆盖个人字段、已有复盘、撤销导入或删除论文时，先查看预览，用户确认后才带 `confirm: true` 再次提交。标记为“不发送给外部模型”的 Idea 和笔记不会返回正文。
 
 ## 附件

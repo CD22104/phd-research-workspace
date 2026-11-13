@@ -70,7 +70,7 @@ export const COLUMNS: Record<string, string[]> = {
   goals: ['week_id', 'project_id', 'title', 'criteria', 'weight', 'due_date', 'status', 'progress', 'note', 'sort', 'carried_from'],
   days: ['kind', 'plan_note', 'checkin_at', 'review', 'mood', 'energy', 'target_minutes', 'reviewed_at'],
   goal_tasks: ['goal_id', 'title', 'status', 'points', 'paper_id', 'paper_ids', 'plan_id', 'idea_id', 'project_id', 'criteria', 'note', 'sort', 'done_at', 'carried_from'],
-  tasks: ['goal_task_id', 'paper_ids', 'completion_cancelled', 'date', 'title', 'goal_id', 'project_id', 'paper_id', 'plan_id', 'idea_id', 'points', 'criteria', 'planned', 'status', 'done_at', 'carried_from', 'note', 'sort'],
+  tasks: ['goal_task_id', 'paper_ids', 'completion_cancelled', 'date', 'title', 'goal_id', 'project_id', 'paper_id', 'plan_id', 'idea_id', 'points', 'criteria', 'planned', 'status', 'done_at', 'carried_from', 'note', 'sort', 'period'],
   sessions: ['task_id', 'project_id', 'paper_id', 'plan_id', 'idea_id', 'label', 'start_at', 'end_at', 'note', 'source'],
   papers: ['title', 'short_name', 'authors', 'team', 'venue', 'published_date', 'url', 'pdf_url', 'code_url', 'arxiv_id', 'doi', 'links',
     'abstract', 'summary', 'collection', 'side', 'direction', 'tags', 'stage', 'possible_dup_of', 'my_note', 'my_question', 'added_at', 'source_id',

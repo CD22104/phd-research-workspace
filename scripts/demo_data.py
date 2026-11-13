@@ -124,13 +124,17 @@ if g3.get('id'):
 for title in ['读 Self-RAG 方法部分', '整理三篇论文的对比表', '写一页错误归因方案']:
     gt = call('POST', '/goal-tasks', {'goal_id': g1.get('id'), 'title': title}) or {}
     if gt.get('id') and title.startswith('整理'):
-        call('POST', f"/goal-tasks/{gt['id']}/schedule", {'date': D(1)})
+        call('POST', f"/goal-tasks/{gt['id']}/schedule", {'date': D(1), 'period': 'morning'})
+    if gt.get('id') and title.startswith('写一页'):
+        call('POST', f"/goal-tasks/{gt['id']}/schedule", {'date': D(2), 'period': 'evening'})
 gt2 = call('POST', '/goal-tasks', {'goal_id': g2.get('id'), 'title': '第二章：相关工作'}) or {}
+if gt2.get('id'):
+    call('POST', f"/goal-tasks/{gt2['id']}/schedule", {'date': D(1), 'period': 'afternoon'})
 
 for back in range(1, min(today.weekday(), 4) + 1):
     d = D(-back)
-    t1 = call('POST', '/tasks', {'date': d, 'title': '读 RAG 实验部分', 'goal_id': g1.get('id'), 'points': 2, 'paper_ids': [rag['id']] if rag else []}) or {}
-    t2 = call('POST', '/tasks', {'date': d, 'title': '开题报告：写相关工作', 'goal_id': g2.get('id'), 'points': 3}) or {}
+    t1 = call('POST', '/tasks', {'date': d, 'title': '读 RAG 实验部分', 'goal_id': g1.get('id'), 'points': 2, 'period': 'morning', 'paper_ids': [rag['id']] if rag else []}) or {}
+    t2 = call('POST', '/tasks', {'date': d, 'title': '开题报告：写相关工作', 'goal_id': g2.get('id'), 'points': 3, 'period': 'afternoon'}) or {}
     call('POST', f'/day/{d}/checkin', {'plan_note': '读论文 + 写开题'})
     for t in (t1, t2):
         if t.get('id') and (back % 2 or t is t1):
@@ -141,11 +145,11 @@ for back in range(1, min(today.weekday(), 4) + 1):
             call('POST', '/sessions', {'start_at': (base - timedelta(hours=a)).isoformat(), 'end_at': (base - timedelta(hours=b)).isoformat(), 'task_id': t['id']})
     call('PUT', f'/day/{d}', {'review': '方法部分读完了，实验设置还需要再看一遍。', 'mood': 4, 'energy': 3})
 
-ta = call('POST', '/tasks', {'date': D(0), 'title': '精读 Self-RAG §3', 'goal_id': g1.get('id'), 'points': 2, 'paper_ids': [selfrag['id']] if selfrag else []}) or {}
-tb = call('POST', '/tasks', {'date': D(0), 'title': '开题报告：第二章小结', 'goal_id': g2.get('id'), 'points': 3, 'criteria': '写出三类方法的对比'}) or {}
-tc = call('POST', '/tasks', {'date': D(0), 'title': '回复合作者邮件', 'points': 1}) or {}
+ta = call('POST', '/tasks', {'date': D(0), 'title': '精读 Self-RAG §3', 'goal_id': g1.get('id'), 'points': 2, 'period': 'morning', 'paper_ids': [selfrag['id']] if selfrag else []}) or {}
+tb = call('POST', '/tasks', {'date': D(0), 'title': '开题报告：第二章小结', 'goal_id': g2.get('id'), 'points': 3, 'period': 'afternoon', 'criteria': '写出三类方法的对比'}) or {}
+tc = call('POST', '/tasks', {'date': D(0), 'title': '回复合作者邮件', 'points': 1, 'period': 'morning'}) or {}
 call('POST', f'/day/{D(0)}/checkin', {'plan_note': '1. 精读 Self-RAG 方法\n2. 写开题第二章'})
-call('POST', '/tasks', {'date': D(0), 'title': '临时：帮同学看一段代码', 'points': 1})
+call('POST', '/tasks', {'date': D(0), 'title': '临时：帮同学看一段代码', 'points': 1, 'period': 'evening'})
 if tc.get('id'):
     call('PATCH', f"/tasks/{tc['id']}", {'status': 'done'})
 if ta.get('id'):

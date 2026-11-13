@@ -8,6 +8,8 @@ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,ar
 const out='/tmp/honey-week-overview-ui';mkdirSync(out,{recursive:true});
 try{
  const ctx=await browser.newContext({viewport:{width:1680,height:1080}});
+ // 今日页的小时轴默认收起；这里测展开后的行为（展开状态会被记住）
+ await ctx.addInitScript(()=>{try{localStorage.setItem('honey.today.timeline.open','1');}catch{}});
  const api=async(method,path,data)=>{const r=await ctx.request.fetch(origin+'/api'+path,{method,data,headers:{'X-Requested-With':'week-overview-test','X-Actor':'web'}});assert(r.ok(),`${method} ${path}: ${r.status()}`);return r.json();};
  const stamp=Date.now();
  await api('POST','/calendar/events',{date:'2026-10-05',title:'周期课程 '+stamp,kind:'course',start_time:'09:00',end_time:'10:00',recurrence:{frequency:'weekly',interval:1,weekdays:[1],until:'2026-10-19'}});

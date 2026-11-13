@@ -5,8 +5,9 @@ import PaperTaskLink from './PaperTaskLink.vue';
 import { isRunning, startTimer, stopTimer } from '../lib/timer';
 import { fmtMin } from '../lib/format';
 import { TASK_DRAG_TYPE } from '../lib/day-timeline';
-const props = defineProps({ task: { type:Object, required:true }, readonly:Boolean, busy:Boolean, schedulable:Boolean });
-const emit = defineEmits(['toggle','edit','carry','drop','remove','background','schedule']);
+import { PERIODS } from '../lib/periods';
+const props = defineProps({ task: { type:Object, required:true }, readonly:Boolean, busy:Boolean, schedulable:Boolean, periods:Boolean });
+const emit = defineEmits(['toggle','edit','carry','drop','remove','background','schedule','period']);
 const timerBusy = ref(false);
 const running = computed(() => isRunning({task_id:props.task.id}));
 const globallyDone = computed(() => props.task.goal_task_status === 'done');
@@ -16,14 +17,16 @@ const completedElsewhere = computed(() => globallyDone.value && props.task.statu
 const papers = computed(() => props.task.papers?.length ? props.task.papers : props.task.paper_id ? [{id:props.task.paper_id,title:props.task.paper_title || `论文 #${props.task.paper_id}`}] : []);
 const menu = computed(() => [
   {label:'编辑',key:'edit'},
-  ...(props.schedulable?[{label:'安排时间',key:'schedule',disabled:inactive.value||done.value}]:[]),
+  ...(props.periods?[...PERIODS.map(p=>({label:`移到${p.label}`,key:'period:'+p.key,disabled:inactive.value||done.value||props.task.period===p.key})),{label:'移到未定时段',key:'period:',disabled:inactive.value||done.value||!props.task.period},{type:'divider',key:'divider-period'}]:[]),
+  ...(props.schedulable?[{label:'安排到具体几点',key:'schedule',disabled:inactive.value||done.value}]:[]),
   {label:'作为后台任务计时',key:'background'},
   {label: props.task.goal_task_id ? '也安排到明天' : '顺延到明天',key:'carry',disabled:props.task.status!=='todo'||globallyDone.value},
   {label:props.task.status==='dropped' ? '恢复安排' : '取消这天的安排',key:'drop',disabled:globallyDone.value},
   {type:'divider',key:'divider'},
   {label:'删除这条日任务',key:'remove'},
 ]);
-function dragTask(e){e.dataTransfer.setData(TASK_DRAG_TYPE,String(props.task.id));e.dataTransfer.effectAllowed='copy';}
+function dragTask(e){e.dataTransfer.setData(TASK_DRAG_TYPE,String(props.task.id));e.dataTransfer.setData('text/plain',JSON.stringify({task_id:props.task.id}));e.dataTransfer.effectAllowed='copyMove';}
+function select(key){if(key.startsWith('period:'))emit('period',props.task,key.slice(7)||null);else emit(key,props.task);}
 async function toggleTimer() { if(timerBusy.value || props.busy || props.readonly || (!running.value && (done.value || inactive.value))) return; timerBusy.value=true; try {if(running.value) await stopTimer(); else await startTimer({task_id:props.task.id});}finally {timerBusy.value=false;} }
 </script>
 <template>
@@ -35,6 +38,7 @@ async function toggleTimer() { if(timerBusy.value || props.busy || props.readonl
         <span v-if="completedElsewhere" class="pill leaf">已在其他安排中完成</span>
         <span v-else-if="task.status==='moved'" class="pill eeyore">已顺延</span>
         <span v-else-if="task.status==='dropped'" class="pill berry">已取消</span>
+        <span v-if="task.planned===0" class="pill tigger" title="确认日计划后临时加入，不计入完成率">临时</span>
         <span v-if="task.points>1" class="pill">{{ task.points }} 点</span>
         <span v-if="task.goal_title" class="pill leaf" :title="'周计划：'+task.goal_title">{{ task.goal_title }}</span>
         <span v-if="task.project_name" class="pill eeyore">{{ task.project_name }}</span>
@@ -43,9 +47,9 @@ async function toggleTimer() { if(timerBusy.value || props.busy || props.readonl
       </div>
     </div>
     <div class="task-actions"><span v-if="task.minutes" class="mins muted small">{{ fmtMin(task.minutes) }}</span>
-      <button v-if="schedulable&&!readonly&&!inactive&&!done" class="task-time-handle" draggable="true" :disabled="busy" :aria-label="`安排时间：${task.title}`" title="拖到时间轴，或点击安排时间" @dragstart="dragTask" @click="emit('schedule',task)">⠿</button>
+      <button v-if="schedulable&&!readonly&&!inactive&&!done" class="task-time-handle" draggable="true" :disabled="busy" :aria-label="`安排时间：${task.title}`" title="拖到其他时段或时间轴；点击排到具体几点" @dragstart="dragTask" @click="emit('schedule',task)">⠿</button>
       <NButton v-if="!readonly && (running || (task.status==='todo' && !globallyDone))" circle size="small" :loading="timerBusy" :disabled="busy" :type="running ? 'warning' : 'primary'" :secondary="!running" :title="running ? '停止计时' : '开始计时'" :aria-label="running ? '停止计时' : `开始计时：${task.title}`" @click="toggleTimer">{{ running ? '⏸' : '▶' }}</NButton>
-      <NDropdown v-if="!readonly" :options="menu" trigger="click" :disabled="busy" @select="key => emit(key,task)"><NButton quaternary circle size="small" :disabled="busy" aria-label="任务操作">⋯</NButton></NDropdown>
+      <NDropdown v-if="!readonly" :options="menu" trigger="click" :disabled="busy" @select="select"><NButton quaternary circle size="small" :disabled="busy" aria-label="任务操作">⋯</NButton></NDropdown>
     </div>
     <div v-if="papers.length" class="task-papers">
       <PaperTaskLink v-for="p in papers" :key="p.id" :paper="p" />

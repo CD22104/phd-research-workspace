@@ -23,6 +23,19 @@ function dateParam(v: string | undefined, ctx: Ctx): string {
   return v;
 }
 
+const PERIOD_KEYS = ['morning', 'afternoon', 'evening'];
+const PERIOD_ALIAS: Record<string, string> = { 早: 'morning', 中: 'afternoon', 晚: 'evening', 上午: 'morning', 下午: 'afternoon', 晚上: 'evening' };
+/** 日任务时段：undefined = 没有传；null / '' = 未定时段 */
+export function periodParam(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null || v === '') return null;
+  const key = PERIOD_ALIAS[String(v)] || String(v);
+  if (!PERIOD_KEYS.includes(key)) throw bad('时段应为 morning / afternoon / evening（上午 / 下午 / 晚上）');
+  return key;
+}
+/** 上午 = 12:00 前，下午 = 12:00–18:00，晚上 = 18:00 后 */
+export const periodOfMinute = (m: number) => (m < 720 ? 'morning' : m < 1080 ? 'afternoon' : 'evening');
+
 async function ensureDay(ctx: Ctx, date: string) {
   const ts = nowIso();
   await run(ctx.db, 'INSERT OR IGNORE INTO days(date, created_at, updated_at) VALUES (?, ?, ?)', date, ts, ts);
@@ -108,13 +121,14 @@ async function goalTasks(ctx: Ctx, where: string, ...params: unknown[]) {
   const rows = await all(ctx.db, `SELECT gt.*, g.title AS goal_title, g.week_id,
       p.title AS paper_title, rp.depth AS plan_depth, rp.purpose AS plan_purpose, rp.paper_id AS plan_paper_id, pr.name AS project_name,
       (SELECT json_group_array(date) FROM (SELECT date FROM tasks WHERE goal_task_id = gt.id AND status NOT IN ('dropped', 'moved') ORDER BY date)) AS scheduled_dates,
+      (SELECT json_group_array(json_object('date', date, 'period', period)) FROM (SELECT date, period FROM tasks WHERE goal_task_id = gt.id AND status NOT IN ('dropped', 'moved') ORDER BY date)) AS scheduled,
       (SELECT date FROM tasks WHERE goal_task_id = gt.id AND status = 'done' ORDER BY done_at DESC LIMIT 1) AS completed_date,
       (SELECT id FROM tasks WHERE goal_task_id = gt.id AND status = 'done' ORDER BY done_at DESC LIMIT 1) AS completed_task_id
     FROM goal_tasks gt JOIN goals g ON g.id = gt.goal_id
     LEFT JOIN papers p ON p.id = gt.paper_id LEFT JOIN reading_plans rp ON rp.id = gt.plan_id
     LEFT JOIN projects pr ON pr.id = COALESCE(gt.project_id, g.project_id)
     WHERE ${where} ORDER BY g.sort, g.id, gt.sort, gt.id`, ...params);
-  return (await withPapers(ctx, rows)).map(row => ({ ...row, scheduled_dates: JSON.parse(row.scheduled_dates || '[]') }));
+  return (await withPapers(ctx, rows)).map(row => ({ ...row, scheduled_dates: JSON.parse(row.scheduled_dates || '[]'), scheduled: JSON.parse(row.scheduled || '[]') }));
 }
 
 function planningError(e: any): never {
@@ -176,6 +190,14 @@ async function scheduleGoalTask(ctx: Ctx, id: number, date: string, planned?: bo
   const row = await first(ctx.db, 'SELECT id FROM tasks WHERE goal_task_id = ? AND date = ?', id, date);
   if (!row) throw conflict('这个子任务刚刚完成，不能继续安排');
   return taskById(ctx, row.id);
+}
+
+/** 安排周子任务并（可选）设定时段：拖进某天的上午 / 下午 / 晚上 */
+async function scheduleWithPeriod(ctx: Ctx, id: number, date: string, period: string | null | undefined, planned?: boolean, existingTaskId?: number) {
+  const t: any = await scheduleGoalTask(ctx, id, date, planned, existingTaskId);
+  if (period === undefined || t.status !== 'todo' || t.period === period) return t;
+  await run(ctx.db, "UPDATE tasks SET period = ?, updated_at = ? WHERE id = ? AND status = 'todo'", period, nowIso(), t.id);
+  return { ...(await taskById(ctx, t.id)), ...(t.already ? { already: true } : {}) };
 }
 
 const runningSession = currentFocus;
@@ -286,7 +308,8 @@ export function registerPlanning(app: App) {
     const ctx = c.get('ctx');
     const b = await body(c);
     const date = dateParam(b.date, ctx);
-    if (b.goal_task_id) return json(c, await scheduleGoalTask(ctx, idParam(String(b.goal_task_id)), date, b.planned == null ? undefined : !!b.planned), 201);
+    const period = periodParam(b.period);
+    if (b.goal_task_id) return json(c, await scheduleWithPeriod(ctx, idParam(String(b.goal_task_id)), date, period, b.planned == null ? undefined : !!b.planned), 201);
     if (!b.title || !String(b.title).trim()) throw bad('任务名称不能为空');
     const day = await first(ctx.db, 'SELECT checkin_at FROM days WHERE date = ?', date);
     const maxSort = await first(ctx.db, 'SELECT COALESCE(MAX(sort), 0) AS m FROM tasks WHERE date = ?', date);
@@ -294,6 +317,7 @@ export function registerPlanning(app: App) {
       date, title: String(b.title).trim(), goal_id: int(b.goal_id), project_id: int(b.project_id),
       plan_id: int(b.plan_id), idea_id: int(b.idea_id), points: Math.max(1, Math.min(8, int(b.points) || 1)), criteria: b.criteria || null,
       note: b.note || null, status: 'todo', planned: b.planned != null ? (b.planned ? 1 : 0) : day?.checkin_at ? 0 : 1, sort: (maxSort?.m || 0) + 1,
+      period: period ?? null,
       ...(await paperFields(ctx, b)),
     };
     if (row.goal_id) {
@@ -321,6 +345,7 @@ export function registerPlanning(app: App) {
     if ('points' in b) patch.points = Math.max(1, Math.min(8, int(b.points) || 1));
     if ('date' in b) patch.date = dateParam(b.date, ctx);
     if ('planned' in b) patch.planned = b.planned ? 1 : 0;
+    if ('period' in b) patch.period = periodParam(b.period) ?? null;
     if (cur.goal_task_id && (('date' in b && b.date !== cur.date) || ('goal_id' in b && int(b.goal_id) !== cur.goal_id))) throw bad('周子任务的每日安排不能更换日期或周目标，请重新安排');
     for (const k of ['carried_from', 'goal_task_id']) delete patch[k];
     if (!('status' in b)) delete patch.completion_cancelled;
@@ -355,6 +380,58 @@ export function registerPlanning(app: App) {
   app.get('/tasks/:id', async c => json(c, await taskById(c.get('ctx'), idParam(c.req.param('id')))));
 
   // 顺延未完成任务：原任务标记为「已顺延」（算那天未完成），在目标日期新建一条
+  // 换时段 / 换日期：周计划排期板和今日页上午 / 下午 / 晚上之间拖动。
+  // 同一天只改时段；换日期时，没有计时记录的安排直接搬过去（小时轴时段作废），有计时记录的保留原记录为「已顺延」并在新日期建一条。
+  app.post('/tasks/:id/move', async (c) => {
+    const ctx = c.get('ctx');
+    const id = idParam(c.req.param('id'));
+    const b = await body(c);
+    const cur = await first(ctx.db, 'SELECT t.*, gt.status AS goal_task_status FROM tasks t LEFT JOIN goal_tasks gt ON gt.id = t.goal_task_id WHERE t.id = ?', id);
+    if (!cur) throw notFound('任务');
+    const date = 'date' in b ? dateParam(b.date, ctx) : cur.date;
+    const period = 'period' in b ? periodParam(b.period) ?? null : cur.period ?? null;
+    const ts = nowIso();
+    if (date === cur.date) {
+      if (period !== (cur.period ?? null)) await run(ctx.db, 'UPDATE tasks SET period = ?, updated_at = ? WHERE id = ?', period, ts, id);
+      return json(c, await taskById(ctx, id));
+    }
+    if (cur.status !== 'todo' || cur.goal_task_status === 'done') throw conflict('已完成、已取消或已顺延的安排不能换到别的日期');
+    if (await first(ctx.db, 'SELECT 1 AS x FROM sessions WHERE task_id = ? AND end_at IS NULL', id)) throw conflict('这项任务正在计时，先停止计时再换日期');
+    const slots = (await first(ctx.db, 'SELECT COUNT(*) AS n FROM task_time_blocks WHERE task_id = ?', id))?.n || 0;
+    if (slots && ctx.actor !== 'web' && b.confirm !== true) throw conflict('换日期会取消这项任务在原来那天排好的具体时段，需要确认', { needs_confirm: true, preview: { task_id: id, from: cur.date, to: date, hour_slots: slots } });
+    const timed = !!(await first(ctx.db, 'SELECT 1 AS x FROM sessions WHERE task_id = ? LIMIT 1', id));
+    const sortOn = `(SELECT COALESCE(MAX(sort), 0) + 1 FROM tasks WHERE date = ?)`;
+    if (cur.goal_task_id) {
+      const there = await first(ctx.db, 'SELECT id, status FROM tasks WHERE goal_task_id = ? AND date = ?', cur.goal_task_id, date);
+      if (there?.status === 'todo') throw conflict('这个子任务那天已经有安排');
+      if (there || timed) {
+        // 目标日期有旧记录（已取消 / 已顺延）就恢复它；原安排有计时记录时保留为「已顺延」，否则删除
+        const target: any = await scheduleWithPeriod(ctx, cur.goal_task_id, date, period);
+        if (timed) await run(ctx.db, "UPDATE tasks SET status = 'moved', updated_at = ? WHERE id = ? AND status = 'todo'", ts, id);
+        else await remove(ctx, 'tasks', id);
+        return json(c, await taskById(ctx, target.id));
+      }
+    } else if (timed) {
+      const nid = await insert(ctx, 'tasks', {
+        paper_ids: cur.paper_ids, date, title: cur.title, goal_id: cur.goal_id, project_id: cur.project_id, paper_id: cur.paper_id, plan_id: cur.plan_id, idea_id: cur.idea_id,
+        points: cur.points, criteria: cur.criteria, note: cur.note, status: 'todo', planned: cur.planned, carried_from: cur.id, period,
+        sort: ((await first(ctx.db, 'SELECT COALESCE(MAX(sort), 0) AS m FROM tasks WHERE date = ?', date))?.m || 0) + 1,
+      });
+      await run(ctx.db, "UPDATE tasks SET status = 'moved', updated_at = ? WHERE id = ? AND status = 'todo'", ts, id);
+      return json(c, await taskById(ctx, nid));
+    }
+    try {
+      const result = await ctx.db.batch([
+        stmt(ctx.db, `UPDATE tasks SET date = ?, period = ?, sort = ${sortOn}, updated_at = ? WHERE id = ? AND status = 'todo' AND updated_at = ?`, date, period, date, ts, id, cur.updated_at),
+        stmt(ctx.db, `INSERT INTO changes(entity,entity_id,op,field,old,new,actor,origin,created_at) SELECT 'task',?,'update','date',?,?,?,'换到其他日期',? WHERE changes() = 1`, id, cur.date, date, ctx.actor, ts),
+        // 小时轴时段属于原来那天，换日期后作废
+        stmt(ctx.db, 'DELETE FROM task_time_blocks WHERE task_id = ? AND EXISTS(SELECT 1 FROM tasks WHERE id = ? AND date = ? AND updated_at = ?)', id, id, date, ts),
+      ]);
+      if (result[0].meta.changes !== 1) throw conflict('任务刚刚发生变化，请刷新后再移动');
+    } catch (e) { planningError(e); }
+    return json(c, await taskById(ctx, id));
+  });
+
   app.post('/tasks/carry', async (c) => {
     const ctx = c.get('ctx');
     const b = await body(c);
@@ -368,14 +445,14 @@ export function registerPlanning(app: App) {
       if (t.goal_task_id) {
         const gt = await first(ctx.db, 'SELECT status FROM goal_tasks WHERE id = ?', t.goal_task_id);
         if (gt?.status === 'done') continue;
-        const scheduled = await scheduleGoalTask(ctx, t.goal_task_id, to);
+        const scheduled = await scheduleWithPeriod(ctx, t.goal_task_id, to, t.period ?? undefined);
         await run(ctx.db, "UPDATE tasks SET status = 'moved', updated_at = ? WHERE id = ? AND status = 'todo'", nowIso(), t.id);
         created.push(scheduled.id);
         continue;
       }
       const nid = await insert(ctx, 'tasks', {
         paper_ids: t.paper_ids, date: to, title: t.title, goal_id: t.goal_id, project_id: t.project_id, paper_id: t.paper_id, plan_id: t.plan_id, idea_id: t.idea_id,
-        points: t.points, criteria: t.criteria, note: t.note, status: 'todo', planned: 1, carried_from: t.id, sort: t.sort,
+        points: t.points, criteria: t.criteria, note: t.note, status: 'todo', planned: 1, carried_from: t.id, sort: t.sort, period: t.period,
       });
       await run(ctx.db, "UPDATE tasks SET status = 'moved', updated_at = ? WHERE id = ?", nowIso(), t.id);
       created.push(nid);
@@ -534,7 +611,7 @@ export function registerPlanning(app: App) {
   app.post('/goal-tasks/:id/schedule', async c => {
     const ctx = c.get('ctx');
     const b = await body(c);
-    return json(c, await scheduleGoalTask(ctx, idParam(c.req.param('id')), dateParam(b.date, ctx), b.planned == null ? undefined : !!b.planned, b.existing_task_id == null ? undefined : idParam(String(b.existing_task_id))), 201);
+    return json(c, await scheduleWithPeriod(ctx, idParam(c.req.param('id')), dateParam(b.date, ctx), periodParam(b.period), b.planned == null ? undefined : !!b.planned, b.existing_task_id == null ? undefined : idParam(String(b.existing_task_id))), 201);
   });
 
   // ───────── 计时 ─────────
